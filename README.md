@@ -18,7 +18,7 @@
 
 ## Seraph
 
-Seraph is a fork of [Zydis](https://github.com/zyantific/zydis). The C library, the headers, and the CMake target stay `Zydis`, and the no-malloc, no-libc rules stay in force. Seraph adds the iced-x86 features that are worth having in C. Progress is tracked in [docs/SERAPH_FEATURES.md](docs/SERAPH_FEATURES.md).
+Seraph is a fork of [Zydis](https://github.com/zyantific/zydis). The C library, the headers, and the CMake target stay `Zydis`, and the no-malloc, no-libc rules stay in force. Zydis itself is the project. When upstream adds an instruction, an encoder fix, or a formatter fix, Seraph takes it by merging `upstream/master`. Extra APIs are optional and live in their own files so that merge stays small. The optional list is [docs/SERAPH_FEATURES.md](docs/SERAPH_FEATURES.md).
 
 ```bash
 git clone --recursive https://github.com/kuro1337WStuff/seraph.git
@@ -29,6 +29,16 @@ ctest --test-dir build -C Release --output-on-failure
 ```
 
 `upstream` points at `zyantific/zydis`. The out-of-source build directory is `build/`.
+
+```bash
+git fetch upstream
+git merge upstream/master
+git submodule update --init --recursive
+cmake --build build --config Release
+ctest --test-dir build -C Release --output-on-failure
+```
+
+Merge upstream into `master`. Do not rebase `master`. After a conflict in `CMakeLists.txt`, `meson.build`, `include/Zydis/Zydis.h`, or `msvc/zydis/Zydis.vcxproj`, keep the upstream lines and the Seraph lines.
 
 Workflows in `.grok/workflows/` rebuild, re-run `ctest`, and push `master` when the prove step can quote a green summary:
 
