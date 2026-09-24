@@ -97,6 +97,59 @@ ZYDIS_EXPORT ZyanStatus ZydisCalcAbsoluteAddressEx(const ZydisDecodedInstruction
     const ZydisRegisterContext* register_context, ZyanU64* result_address);
 
 /* ---------------------------------------------------------------------------------------------- */
+/* Constant offsets                                                                               */
+/* ---------------------------------------------------------------------------------------------- */
+
+/**
+ * Byte offsets of the displacement and immediates inside an instruction.
+ *
+ * A size of zero means that field is not present in the instruction bytes. Offsets are
+ * relative to the first byte of the instruction. Implicit immediates that are not encoded
+ * in the byte stream (for example `shl al, 1`) report a size of zero.
+ *
+ * Sizes are in bytes. `ZydisDecodedInstructionRaw` stores the same locations with sizes
+ * in bits.
+ */
+typedef struct ZydisConstantOffsets_
+{
+    /**
+     * Offset of the displacement, in bytes.
+     */
+    ZyanU8 displacement_offset;
+    /**
+     * Size of the displacement, in bytes, or zero when the instruction has none.
+     */
+    ZyanU8 displacement_size;
+    /**
+     * Offset of the first immediate, in bytes.
+     */
+    ZyanU8 immediate_offset;
+    /**
+     * Size of the first immediate, in bytes, or zero when the instruction has none.
+     */
+    ZyanU8 immediate_size;
+    /**
+     * Offset of the second immediate, in bytes.
+     */
+    ZyanU8 immediate_offset2;
+    /**
+     * Size of the second immediate, in bytes, or zero when the instruction has none.
+     */
+    ZyanU8 immediate_size2;
+} ZydisConstantOffsets;
+
+/**
+ * Reports the displacement and immediate locations inside a decoded instruction.
+ *
+ * @param   instruction A pointer to the `ZydisDecodedInstruction` struct.
+ * @param   offsets     A pointer to the `ZydisConstantOffsets` struct that receives the result.
+ *
+ * @return  A zyan status code.
+ */
+ZYDIS_EXPORT ZyanStatus ZydisGetConstantOffsets(const ZydisDecodedInstruction* instruction,
+    ZydisConstantOffsets* offsets);
+
+/* ---------------------------------------------------------------------------------------------- */
 
 /**
  * @}

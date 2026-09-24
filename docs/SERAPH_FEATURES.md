@@ -4,7 +4,7 @@ Zydis already decodes, encodes, and formats Intel, AT&T, and Intel-MASM. These a
 
 | Id | Status | What | Done when |
 | --- | --- | --- | --- |
-| constant-offsets | open | `ZydisGetConstantOffsets` | Patching the immediate of `mov rax, imm` and the displacement of a RIP-relative `mov` changes the decoded value. `enter` reports two immediates. `shl al, 1` reports none. |
+| constant-offsets | done | `ZydisGetConstantOffsets` | Patching the immediate of `mov rax, imm` and the displacement of a RIP-relative `mov` changes the decoded value. `enter` reports two immediates. `shl al, 1` reports none. |
 | instruction-info | open | `ZydisInstructionInfo` | `push`, `cpuid`, `imul`, `call`, `ret`, `fld`, and `xsave` report implicit registers, flags, flow, and stack or FPU delta. |
 | nasm-formatter | open | `ZYDIS_FORMATTER_STYLE_NASM` and MASM acceptance fixes | A fixed corpus matches iced NASM text. MASM covers broadcast, far `ret`, `st(n)`, and `int 3`. |
 | assembler | open | `ZydisAsm` | `mov`, a scaled memory operand, `lock`, and a forward label assemble and decode back to the same mnemonic and operands. |

@@ -199,4 +199,54 @@ ZyanStatus ZydisCalcAbsoluteAddressEx(const ZydisDecodedInstruction* instruction
     }
 }
 
+/* ---------------------------------------------------------------------------------------------- */
+/* Constant offsets                                                                               */
+/* ---------------------------------------------------------------------------------------------- */
+
+static ZyanStatus ZydisSetConstantField(ZyanU8 size_bits, ZyanU8 offset, ZyanU8* size_bytes,
+    ZyanU8* out_offset)
+{
+    if (!size_bits)
+    {
+        return ZYAN_STATUS_SUCCESS;
+    }
+    if ((size_bits % 8) != 0)
+    {
+        return ZYAN_STATUS_INVALID_ARGUMENT;
+    }
+    *size_bytes = (ZyanU8)(size_bits / 8);
+    *out_offset = offset;
+    return ZYAN_STATUS_SUCCESS;
+}
+
+ZyanStatus ZydisGetConstantOffsets(const ZydisDecodedInstruction* instruction,
+    ZydisConstantOffsets* offsets)
+{
+    ZyanStatus status;
+
+    if (!instruction || !offsets)
+    {
+        return ZYAN_STATUS_INVALID_ARGUMENT;
+    }
+
+    ZYAN_MEMSET(offsets, 0, sizeof(*offsets));
+
+    status = ZydisSetConstantField(instruction->raw.disp.size, instruction->raw.disp.offset,
+        &offsets->displacement_size, &offsets->displacement_offset);
+    if (ZYAN_FAILED(status))
+    {
+        return status;
+    }
+
+    status = ZydisSetConstantField(instruction->raw.imm[0].size, instruction->raw.imm[0].offset,
+        &offsets->immediate_size, &offsets->immediate_offset);
+    if (ZYAN_FAILED(status))
+    {
+        return status;
+    }
+
+    return ZydisSetConstantField(instruction->raw.imm[1].size, instruction->raw.imm[1].offset,
+        &offsets->immediate_size2, &offsets->immediate_offset2);
+}
+
 /* ============================================================================================== */

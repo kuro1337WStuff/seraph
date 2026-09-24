@@ -3,6 +3,15 @@ py_exe = pymod.find_installation('python3', required: tests)
 
 tests_req = py_exe.found()
 
+if tests_req and decoder.enabled()
+  constant_offsets = executable(
+    'SeraphConstantOffsets',
+    'constant_offsets.c',
+    dependencies: [zydis_dep],
+  )
+  test('SeraphConstantOffsets', constant_offsets)
+endif
+
 if tests_req
   test(
     'ZydisRegression',
