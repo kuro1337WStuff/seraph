@@ -31,6 +31,7 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 
 #include <Zydis/Zydis.h>
 
@@ -135,6 +136,9 @@ int main(void)
     ZydisDecodedInstruction instruction;
     ZydisDecodedOperand operands[ZYDIS_MAX_OPERAND_COUNT];
     ZydisInstructionInfo info;
+
+    memset(&instruction, 0, sizeof(instruction));
+    memset(operands, 0, sizeof(operands));
 
     if (!ZYAN_FAILED(ZydisGetInstructionInfo(ZYAN_NULL, operands, 1, &info)) ||
         !ZYAN_FAILED(ZydisGetInstructionInfo(&instruction, operands, 1, ZYAN_NULL)))

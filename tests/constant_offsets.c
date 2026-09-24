@@ -115,6 +115,8 @@ int main(void)
     ZydisDecodedOperand operands[ZYDIS_MAX_OPERAND_COUNT];
     ZydisConstantOffsets offsets;
 
+    memset(&instruction, 0, sizeof(instruction));
+
     /* mov rax, 0x1337 */
     static const ZyanU8 mov_imm[] = { 0x48, 0xC7, 0xC0, 0x37, 0x13, 0x00, 0x00 };
     /* mov rax, qword ptr [rip+0x12345678] */

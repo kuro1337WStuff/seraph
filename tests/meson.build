@@ -10,12 +10,14 @@ if tests_req and decoder.enabled()
     dependencies: [zydis_dep],
   )
   test('SeraphConstantOffsets', constant_offsets)
-  instruction_info = executable(
-    'SeraphInstructionInfo',
-    'instruction_info.c',
-    dependencies: [zydis_dep],
-  )
-  test('SeraphInstructionInfo', instruction_info)
+  if minimal.disabled()
+    instruction_info = executable(
+      'SeraphInstructionInfo',
+      'instruction_info.c',
+      dependencies: [zydis_dep],
+    )
+    test('SeraphInstructionInfo', instruction_info)
+  endif
 endif
 
 if tests_req
