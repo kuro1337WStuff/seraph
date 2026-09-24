@@ -38,6 +38,7 @@
 #if !defined(ZYDIS_DISABLE_DECODER)
 #   include <Zydis/Decoder.h>
 #   include <Zydis/DecoderTypes.h>
+#   include <Zydis/InstructionInfo.h>
 #endif
 
 #if !defined(ZYDIS_DISABLE_ENCODER)

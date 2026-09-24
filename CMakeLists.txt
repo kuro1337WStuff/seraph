@@ -249,7 +249,9 @@ if (ZYDIS_FEATURE_DECODER)
             "${CMAKE_CURRENT_LIST_DIR}/include/Zydis/DecoderTypes.h"
             "${CMAKE_CURRENT_LIST_DIR}/include/Zydis/Internal/DecoderData.h"
             "src/Decoder.c"
-            "src/DecoderData.c")
+            "src/DecoderData.c"
+            "${CMAKE_CURRENT_LIST_DIR}/include/Zydis/InstructionInfo.h"
+            "src/InstructionInfo.c")
     if (ZYDIS_FEATURE_ENCODER)
         target_sources("Zydis"
             PRIVATE
@@ -565,5 +567,10 @@ if (ZYDIS_BUILD_TESTS)
         target_compile_definitions("SeraphConstantOffsets" PRIVATE "_CRT_SECURE_NO_WARNINGS")
         zyan_set_common_flags("SeraphConstantOffsets")
         add_test(NAME "SeraphConstantOffsets" COMMAND "SeraphConstantOffsets")
+        add_executable("SeraphInstructionInfo" "tests/instruction_info.c")
+        target_link_libraries("SeraphInstructionInfo" PUBLIC "Zydis")
+        target_compile_definitions("SeraphInstructionInfo" PRIVATE "_CRT_SECURE_NO_WARNINGS")
+        zyan_set_common_flags("SeraphInstructionInfo")
+        add_test(NAME "SeraphInstructionInfo" COMMAND "SeraphInstructionInfo")
     endif ()
 endif ()

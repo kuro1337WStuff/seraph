@@ -939,6 +939,7 @@
     <ClCompile Include="..\..\src\Decoder.c" />
     <ClCompile Include="..\..\src\DecoderData.c" />
     <ClCompile Include="..\..\src\Formatter.c" />
+    <ClCompile Include="..\..\src\InstructionInfo.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\dependencies\zycore\include\Zycore\Allocator.h" />
@@ -977,6 +978,7 @@
     <ClInclude Include="..\..\include\Zydis\ShortString.h" />
     <ClInclude Include="..\..\include\Zydis\Status.h" />
     <ClInclude Include="..\..\include\Zydis\Utils.h" />
+    <ClInclude Include="..\..\include\Zydis\InstructionInfo.h" />
     <ClInclude Include="..\..\include\Zydis\Zydis.h" />
     <ClInclude Include="..\..\include\Zydis\Internal\SharedData.h" />
     <ClInclude Include="..\..\include\Zydis\Internal\DecoderData.h" />

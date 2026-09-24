@@ -180,6 +180,10 @@ if decoder.enabled()
   src += files(
     'src/Decoder.c',
     'src/DecoderData.c',
+    'src/InstructionInfo.c',
+  )
+  hdrs_common += files(
+    'include/Zydis/InstructionInfo.h',
   )
 endif
 
