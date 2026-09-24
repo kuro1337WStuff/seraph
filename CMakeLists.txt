@@ -561,7 +561,7 @@ if (ZYDIS_BUILD_TESTS)
         )
     endif ()
 
-    if (ZYDIS_FEATURE_DECODER AND NOT ZYAN_NO_LIBC)
+    if (ZYDIS_FEATURE_DECODER AND NOT ZYAN_NO_LIBC AND NOT ZYDIS_MINIMAL_MODE)
         add_executable("SeraphConstantOffsets" "tests/constant_offsets.c")
         target_link_libraries("SeraphConstantOffsets" PUBLIC "Zydis")
         target_compile_definitions("SeraphConstantOffsets" PRIVATE "_CRT_SECURE_NO_WARNINGS")

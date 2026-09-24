@@ -3,21 +3,19 @@ py_exe = pymod.find_installation('python3', required: tests)
 
 tests_req = py_exe.found()
 
-if tests_req and decoder.enabled()
+if tests_req and decoder.enabled() and minimal.disabled()
   constant_offsets = executable(
     'SeraphConstantOffsets',
     'constant_offsets.c',
     dependencies: [zydis_dep],
   )
   test('SeraphConstantOffsets', constant_offsets)
-  if minimal.disabled()
-    instruction_info = executable(
-      'SeraphInstructionInfo',
-      'instruction_info.c',
-      dependencies: [zydis_dep],
-    )
-    test('SeraphInstructionInfo', instruction_info)
-  endif
+  instruction_info = executable(
+    'SeraphInstructionInfo',
+    'instruction_info.c',
+    dependencies: [zydis_dep],
+  )
+  test('SeraphInstructionInfo', instruction_info)
 endif
 
 if tests_req
