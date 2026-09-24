@@ -10,12 +10,32 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT">
-  <a href="https://github.com/zyantific/zydis/actions"><img src="https://github.com/zyantific/zydis/workflows/CI/badge.svg" alt="GitHub Actions"></a>
-  <a href="https://bugs.chromium.org/p/oss-fuzz/issues/list?sort=-opened&can=1&q=proj:zydis"><img src="https://oss-fuzz-build-logs.storage.googleapis.com/badges/zydis.svg" alt="Fuzzing Status"></a>
+  <a href="https://github.com/kuro1337WStuff/seraph/actions"><img src="https://github.com/kuro1337WStuff/seraph/workflows/CI/badge.svg" alt="GitHub Actions"></a>
   <a href="https://discord.zyantific.com/"><img src="https://img.shields.io/discord/390136917779415060.svg?logo=discord&label=Discord" alt="Discord"></a>
 </p>
 
 <p align="center">Fast and lightweight x86/x86-64 disassembler and code generation library.</p>
+
+## Seraph
+
+Seraph is a fork of [Zydis](https://github.com/zyantific/zydis). The C library, the headers, and the CMake target stay `Zydis`, and the no-malloc, no-libc rules stay in force. Seraph adds the iced-x86 features that are worth having in C. Progress is tracked in [docs/SERAPH_FEATURES.md](docs/SERAPH_FEATURES.md).
+
+```bash
+git clone --recursive https://github.com/kuro1337WStuff/seraph.git
+cd seraph
+cmake -B build -DZYDIS_BUILD_TESTS=ON
+cmake --build build --config Release
+ctest --test-dir build -C Release --output-on-failure
+```
+
+`upstream` points at `zyantific/zydis`. The out-of-source build directory is `build/`.
+
+Workflows in `.grok/workflows/` rebuild, re-run `ctest`, and push `master` when the prove step can quote a green summary:
+
+- `/seraph-build-test`
+- `/seraph-feature` with `args.feature` set to an id from `docs/SERAPH_FEATURES.md`
+
+Open this folder as its own workspace: `grok --cwd` the `seraph` directory. In T3 Code, add the folder with Ctrl+K → Add Project.
 
 ## Features
 

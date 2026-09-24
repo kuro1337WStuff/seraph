@@ -16,7 +16,11 @@ def get_exitcode_stdout_stderr(path, cmd):
     """
     args = [path]
     args.extend(shlex.split(cmd))
-    proc = Popen(args, stdout=PIPE, stderr=PIPE)
+    env = os.environ.copy()
+    # Zydis treats any non-empty FORCE_COLOR as "force color on", including "0".
+    env.pop("FORCE_COLOR", None)
+    env["NO_COLOR"] = "1"
+    proc = Popen(args, stdout=PIPE, stderr=PIPE, env=env)
     out, err = proc.communicate()
     exitcode = proc.returncode
     return exitcode, out, err

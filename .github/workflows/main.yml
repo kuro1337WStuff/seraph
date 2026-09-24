@@ -140,30 +140,22 @@ jobs:
           cd amalgamated-dist
           gcc -shared -I. -fPIC -olibzydis.so Zydis.c
 
-  fuzzing:
+  # OSS-Fuzz project "zydis" belongs to zyantific. This fork cannot upload there.
+  sanitizers:
+    name: clang asan+ubsan (ubuntu-22.04)
     runs-on: ubuntu-22.04
-    strategy:
-      fail-fast: false
-      matrix:
-        sanitizer: [address, undefined, memory]
     steps:
-      - name: Build Fuzzers (${{ matrix.sanitizer }})
-        id: build
-        uses: google/oss-fuzz/infra/cifuzz/actions/build_fuzzers@master
-        with:
-          oss-fuzz-project-name: zydis
-          dry-run: false
-          sanitizer: ${{ matrix.sanitizer }}
-      - name: Run Fuzzers (${{ matrix.sanitizer }})
-        uses: google/oss-fuzz/infra/cifuzz/actions/run_fuzzers@master
-        with:
-          oss-fuzz-project-name: zydis
-          fuzz-seconds: 600
-          dry-run: false
-          sanitizer: ${{ matrix.sanitizer }}
-      - name: Upload Crash
-        uses: actions/upload-artifact@v4
-        if: failure() && steps.build.outcome == 'success'
-        with:
-          name: ${{ matrix.sanitizer }}-artifacts
-          path: ./out/artifacts
+      - name: Checkout
+        uses: actions/checkout@v4
+        with: { submodules: recursive }
+      - name: Configuring
+        run: |
+          cmake -B build -DZYDIS_BUILD_TESTS=ON -DZYAN_DEV_MODE=ON \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_C_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
+      - name: Building
+        run: cmake --build build -j2
+      - name: Running tests
+        run: ctest --test-dir build --output-on-failure

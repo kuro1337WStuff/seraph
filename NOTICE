@@ -1,0 +1,8 @@
+Seraph is a fork of Zydis.
+
+Zydis is copyright Florian Bernd and Joel Höner and licensed under the MIT
+license in LICENSE.
+
+New Seraph sources are MIT as well. Where a new API's behavior was checked
+against iced-x86, that library is copyright the iced project and contributors
+and is also MIT. Seraph does not copy iced-x86 source into this tree.
