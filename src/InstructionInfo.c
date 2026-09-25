@@ -693,12 +693,11 @@ static void ZydisInfoSetStack(const ZydisDecodedInstruction* instruction,
     }
 }
 
-static void ZydisInfoSetFpu(const ZydisDecodedInstruction* instruction, ZydisInstructionInfo* info)
+static ZyanI8 ZydisInfoX87Kind(ZydisMnemonic mnemonic, ZyanBool* conditional)
 {
-    info->fpu_delta_known = ZYAN_FALSE;
-    info->fpu_delta = 0;
+    *conditional = ZYAN_FALSE;
 
-    switch (instruction->mnemonic)
+    switch (mnemonic)
     {
     case ZYDIS_MNEMONIC_FLD:
     case ZYDIS_MNEMONIC_FLD1:
@@ -708,16 +707,135 @@ static void ZydisInfoSetFpu(const ZydisDecodedInstruction* instruction, ZydisIns
     case ZYDIS_MNEMONIC_FLDLN2:
     case ZYDIS_MNEMONIC_FLDPI:
     case ZYDIS_MNEMONIC_FLDZ:
-        info->fpu_delta_known = ZYAN_TRUE;
-        info->fpu_delta = 1;
-        break;
+    case ZYDIS_MNEMONIC_FXTRACT:
+    case ZYDIS_MNEMONIC_FILD:
+    case ZYDIS_MNEMONIC_FBLD:
+        return 1;
+    case ZYDIS_MNEMONIC_FDECSTP:
+        return 2;
+    case ZYDIS_MNEMONIC_FPTAN:
+    case ZYDIS_MNEMONIC_FSINCOS:
+        *conditional = ZYAN_TRUE;
+        return 1;
+    case ZYDIS_MNEMONIC_FINCSTP:
+        return -2;
     case ZYDIS_MNEMONIC_FSTP:
-        info->fpu_delta_known = ZYAN_TRUE;
-        info->fpu_delta = -1;
-        break;
+    case ZYDIS_MNEMONIC_FSTPNCE:
+    case ZYDIS_MNEMONIC_FCOMP:
+    case ZYDIS_MNEMONIC_FUCOMP:
+    case ZYDIS_MNEMONIC_FICOMP:
+    case ZYDIS_MNEMONIC_FISTP:
+    case ZYDIS_MNEMONIC_FISTTP:
+    case ZYDIS_MNEMONIC_FADDP:
+    case ZYDIS_MNEMONIC_FMULP:
+    case ZYDIS_MNEMONIC_FSUBP:
+    case ZYDIS_MNEMONIC_FSUBRP:
+    case ZYDIS_MNEMONIC_FDIVP:
+    case ZYDIS_MNEMONIC_FDIVRP:
+    case ZYDIS_MNEMONIC_FBSTP:
+    case ZYDIS_MNEMONIC_FFREEP:
+    case ZYDIS_MNEMONIC_FYL2X:
+    case ZYDIS_MNEMONIC_FYL2XP1:
+    case ZYDIS_MNEMONIC_FPATAN:
+    case ZYDIS_MNEMONIC_FCOMIP:
+    case ZYDIS_MNEMONIC_FUCOMIP:
+        return -1;
+    case ZYDIS_MNEMONIC_FCOMPP:
+    case ZYDIS_MNEMONIC_FUCOMPP:
+        return -3;
+    case ZYDIS_MNEMONIC_FNINIT:
+    case ZYDIS_MNEMONIC_FRSTOR:
+    case ZYDIS_MNEMONIC_EMMS:
+    case ZYDIS_MNEMONIC_FEMMS:
+        return 4;
+    case ZYDIS_MNEMONIC_FNSAVE:
+        return 5;
     default:
-        break;
+        return 0;
     }
+}
+
+static void ZydisInfoSetFpu(const ZydisDecodedInstruction* instruction, ZydisInstructionInfo* info)
+{
+    ZyanBool conditional = ZYAN_FALSE;
+    ZyanI8 kind = ZydisInfoX87Kind(instruction->mnemonic, &conditional);
+
+    info->fpu_delta_known = ZYAN_FALSE;
+    info->fpu_delta = 0;
+    if (conditional || (kind == 0) || (kind == 4) || (kind == 5))
+    {
+        return;
+    }
+    info->fpu_delta_known = ZYAN_TRUE;
+    if (kind == 1)
+    {
+        info->fpu_delta = 1;
+    }
+    else if (kind == 2)
+    {
+        info->fpu_delta = 1;
+    }
+    else if (kind == -2)
+    {
+        info->fpu_delta = -1;
+    }
+    else if (kind == -1)
+    {
+        info->fpu_delta = -1;
+    }
+    else if (kind == -3)
+    {
+        info->fpu_delta = -2;
+    }
+}
+
+static ZyanStatus ZydisInfoAddX87Stack(ZydisInstructionInfo* info, ZydisMnemonic mnemonic)
+{
+    ZyanBool conditional = ZYAN_FALSE;
+    ZyanI8 kind = ZydisInfoX87Kind(mnemonic, &conditional);
+    ZydisOperandActions move_action;
+    ZydisOperandActions st7_action;
+    ZyanU8 i;
+
+    if (kind == 0)
+    {
+        return ZYAN_STATUS_SUCCESS;
+    }
+
+    if (conditional)
+    {
+        move_action = (ZydisOperandActions)(ZYDIS_OPERAND_ACTION_CONDREAD |
+            ZYDIS_OPERAND_ACTION_CONDWRITE);
+        st7_action = ZYDIS_OPERAND_ACTION_CONDWRITE;
+    }
+    else if ((kind == 1))
+    {
+        move_action = ZYDIS_OPERAND_ACTION_READWRITE;
+        st7_action = ZYDIS_OPERAND_ACTION_WRITE;
+    }
+    else if ((kind == 4))
+    {
+        move_action = ZYDIS_OPERAND_ACTION_WRITE;
+        st7_action = ZYDIS_OPERAND_ACTION_WRITE;
+    }
+    else
+    {
+        move_action = ZYDIS_OPERAND_ACTION_READWRITE;
+        st7_action = ZYDIS_OPERAND_ACTION_READWRITE;
+    }
+
+    for (i = 0; i < 8; ++i)
+    {
+        ZyanStatus status = ZydisInfoAddGpr(info, ZYDIS_MACHINE_MODE_LONG_64, mnemonic,
+            (ZydisRegister)(ZYDIS_REGISTER_ST0 + i),
+            (i == 7) ? st7_action : move_action, 80);
+
+        if (ZYAN_FAILED(status))
+        {
+            return status;
+        }
+    }
+    return ZYAN_STATUS_SUCCESS;
 }
 
 /* ============================================================================================== */
@@ -936,7 +1054,7 @@ ZyanStatus ZydisGetInstructionInfo(const ZydisDecodedInstruction* instruction,
         }
     }
 
-    return ZYAN_STATUS_SUCCESS;
+    return ZydisInfoAddX87Stack(info, instruction->mnemonic);
 }
 
 /* ============================================================================================== */

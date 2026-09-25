@@ -328,12 +328,51 @@ int main(void)
         if (Decode("fld", bytes, sizeof(bytes), &instruction, operands, &info))
         {
             ExpectFpu("fld", &info, 1);
-            ExpectReg("fld", &info, ZYDIS_REGISTER_ST0, ZYDIS_OPERAND_ACTION_WRITE);
-            ExpectReg("fld", &info, ZYDIS_REGISTER_MM0, ZYDIS_OPERAND_ACTION_WRITE);
+            ExpectReg("fld", &info, ZYDIS_REGISTER_ST0, ZYDIS_OPERAND_ACTION_READWRITE);
+            ExpectReg("fld", &info, ZYDIS_REGISTER_ST1, ZYDIS_OPERAND_ACTION_READWRITE);
+            ExpectReg("fld", &info, ZYDIS_REGISTER_ST6, ZYDIS_OPERAND_ACTION_READWRITE);
+            ExpectReg("fld", &info, ZYDIS_REGISTER_ST7, ZYDIS_OPERAND_ACTION_WRITE);
+            ExpectReg("fld", &info, ZYDIS_REGISTER_MM0, ZYDIS_OPERAND_ACTION_READWRITE);
+            ExpectReg("fld", &info, ZYDIS_REGISTER_MM7, ZYDIS_OPERAND_ACTION_WRITE);
             if ((info.memory_count != 1) || (info.memory[0].action != ZYDIS_OPERAND_ACTION_READ))
             {
                 Fail("fld", "memory");
             }
+        }
+    }
+
+    {
+        static const ZyanU8 bytes[] = { 0xDE, 0xD9 };
+        if (Decode("fcompp", bytes, sizeof(bytes), &instruction, operands, &info))
+        {
+            ExpectFpu("fcompp", &info, -2);
+            ExpectReg("fcompp", &info, ZYDIS_REGISTER_ST0, ZYDIS_OPERAND_ACTION_READWRITE);
+            ExpectReg("fcompp", &info, ZYDIS_REGISTER_ST7, ZYDIS_OPERAND_ACTION_READWRITE);
+            ExpectReg("fcompp", &info, ZYDIS_REGISTER_MM1, ZYDIS_OPERAND_ACTION_READWRITE);
+        }
+    }
+
+    {
+        static const ZyanU8 bytes[] = { 0xD9, 0xF6 };
+        if (Decode("fdecstp", bytes, sizeof(bytes), &instruction, operands, &info))
+        {
+            ExpectFpu("fdecstp", &info, 1);
+            ExpectReg("fdecstp", &info, ZYDIS_REGISTER_ST0, ZYDIS_OPERAND_ACTION_READWRITE);
+            ExpectReg("fdecstp", &info, ZYDIS_REGISTER_ST7, ZYDIS_OPERAND_ACTION_READWRITE);
+        }
+    }
+
+    {
+        static const ZyanU8 bytes[] = { 0xDB, 0xE3 };
+        if (Decode("fninit", bytes, sizeof(bytes), &instruction, operands, &info))
+        {
+            if (info.fpu_delta_known)
+            {
+                Fail("fninit", "delta should be unknown");
+            }
+            ExpectReg("fninit", &info, ZYDIS_REGISTER_ST0, ZYDIS_OPERAND_ACTION_WRITE);
+            ExpectReg("fninit", &info, ZYDIS_REGISTER_ST7, ZYDIS_OPERAND_ACTION_WRITE);
+            ExpectReg("fninit", &info, ZYDIS_REGISTER_MM0, ZYDIS_OPERAND_ACTION_WRITE);
         }
     }
 

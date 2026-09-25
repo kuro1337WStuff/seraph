@@ -122,8 +122,10 @@ typedef struct ZydisInstructionMemoryUse_
  * `stack_delta_known` is true. `leave` is not a constant delta, because it copies RBP into
  * RSP before the pop.
  *
- * `fpu_delta` is the constant change to the x87 TOP register. It is valid only when
- * `fpu_delta_known` is true.
+ * `fpu_delta` is how many values the x87 stack gains. `fld` is `+1` and `fstp` is
+ * `-1`. It is valid only when `fpu_delta_known` is true. A push reads `st0`–`st6`
+ * and writes `st0`–`st7` (`st7` is overwritten and not read). A pop reads and
+ * writes all eight. `fdecstp` and `fincstp` rotate all eight.
  */
 typedef struct ZydisInstructionInfo_
 {
