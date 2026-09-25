@@ -84,6 +84,29 @@ typedef enum ZydisInstructionFlow_
 } ZydisInstructionFlow;
 
 /**
+ * Why a hypervisor would intercept the instruction.
+ *
+ * `ZYDIS_INSTRUCTION_FLOW_PRIVILEGED` is the coarse bucket for `SYSTEM`, `IO`, and `VTX`.
+ * This enum splits the exits that share that bucket: `IN` is I/O, `RDMSR` is an MSR,
+ * `LGDT` is a descriptor table, and `VMREAD` is VMX. SVM instructions such as `VMRUN`
+ * are reported on their own. `CPUID`, `HLT`, and `MOV CR` stay `NONE`. `MOV CR` is a
+ * data transfer, so its flow is `NEXT` rather than `PRIVILEGED`.
+ */
+typedef enum ZydisInstructionIntercept_
+{
+    ZYDIS_INSTRUCTION_INTERCEPT_NONE,
+    ZYDIS_INSTRUCTION_INTERCEPT_IO,
+    ZYDIS_INSTRUCTION_INTERCEPT_MSR,
+    ZYDIS_INSTRUCTION_INTERCEPT_DESCRIPTOR,
+    ZYDIS_INSTRUCTION_INTERCEPT_VMX,
+    ZYDIS_INSTRUCTION_INTERCEPT_SVM,
+
+    ZYDIS_INSTRUCTION_INTERCEPT_MAX_VALUE = ZYDIS_INSTRUCTION_INTERCEPT_SVM,
+    ZYDIS_INSTRUCTION_INTERCEPT_REQUIRED_BITS =
+        ZYAN_BITS_TO_REPRESENT(ZYDIS_INSTRUCTION_INTERCEPT_MAX_VALUE)
+} ZydisInstructionIntercept;
+
+/**
  * One register touched by the instruction.
  *
  * GPR, vector, x87/MMX, flag, and IP accesses are also reported on the other views of that
@@ -129,10 +152,18 @@ typedef struct ZydisInstructionMemoryUse_
  * `fsincos` push only when C2 stays clear, so the delta is unknown. `st0` is
  * still read, and the stack writes are conditional. `fsin` and `fcos` write
  * `st0` only on that same in-range path.
+ *
+ * `fpu_top_written` is set when the FPU `TOP` field is written, including a
+ * conditional push and a state load such as `fldenv` or `fxrstor`. `emms` clears
+ * tags and leaves `TOP` alone. An unknown `fpu_delta` does not by itself mean
+ * `TOP` changed.
+ *
+ * `intercept` splits privileged exits. See `ZydisInstructionIntercept`.
  */
 typedef struct ZydisInstructionInfo_
 {
     ZydisInstructionFlow flow;
+    ZydisInstructionIntercept intercept;
     ZyanU8 register_count;
     ZydisInstructionRegisterUse registers[ZYDIS_INSTRUCTION_INFO_MAX_REGISTERS];
     ZyanU8 memory_count;
@@ -146,6 +177,11 @@ typedef struct ZydisInstructionInfo_
     ZyanI32 stack_delta;
     ZyanBool fpu_delta_known;
     ZyanI8 fpu_delta;
+    /**
+     * `ZYAN_TRUE` when the instruction writes the x87 `TOP` field.
+     * `fptan` and `fsincos` set this even though the push is conditional.
+     */
+    ZyanBool fpu_top_written;
 } ZydisInstructionInfo;
 
 /* ============================================================================================== */

@@ -175,6 +175,27 @@ static void ExpectFpu(const char* label, const ZydisInstructionInfo* info, ZyanI
     }
 }
 
+static void ExpectTop(const char* label, const ZydisInstructionInfo* info, ZyanBool written)
+{
+    if (info->fpu_top_written != written)
+    {
+        printf("FAIL %s: fpu_top_written got %d want %d\n", label,
+            (int)info->fpu_top_written, (int)written);
+        ++g_failures;
+    }
+}
+
+static void ExpectIntercept(const char* label, const ZydisInstructionInfo* info,
+    ZydisInstructionIntercept intercept)
+{
+    if (info->intercept != intercept)
+    {
+        printf("FAIL %s: intercept got %d want %d\n", label,
+            (int)info->intercept, (int)intercept);
+        ++g_failures;
+    }
+}
+
 /* ============================================================================================== */
 /* Cases                                                                                          */
 /* ============================================================================================== */
@@ -215,6 +236,8 @@ int main(void)
         if (Decode("cpuid", bytes, sizeof(bytes), &instruction, operands, &info))
         {
             ExpectFlow("cpuid", &info, ZYDIS_INSTRUCTION_FLOW_NEXT);
+            ExpectIntercept("cpuid", &info, ZYDIS_INSTRUCTION_INTERCEPT_NONE);
+            ExpectTop("cpuid", &info, ZYAN_FALSE);
             ExpectReg("cpuid", &info, ZYDIS_REGISTER_EAX, ZYDIS_OPERAND_ACTION_READWRITE);
             ExpectReg("cpuid", &info, ZYDIS_REGISTER_EBX, ZYDIS_OPERAND_ACTION_WRITE);
             ExpectReg("cpuid", &info, ZYDIS_REGISTER_ECX, ZYDIS_OPERAND_ACTION_CONDREAD_WRITE);
@@ -328,6 +351,7 @@ int main(void)
         if (Decode("fld", bytes, sizeof(bytes), &instruction, operands, &info))
         {
             ExpectFpu("fld", &info, 1);
+            ExpectTop("fld", &info, ZYAN_TRUE);
             ExpectReg("fld", &info, ZYDIS_REGISTER_ST0, ZYDIS_OPERAND_ACTION_READWRITE);
             ExpectReg("fld", &info, ZYDIS_REGISTER_ST1, ZYDIS_OPERAND_ACTION_READWRITE);
             ExpectReg("fld", &info, ZYDIS_REGISTER_ST6, ZYDIS_OPERAND_ACTION_READWRITE);
@@ -370,6 +394,7 @@ int main(void)
             {
                 Fail("fninit", "delta should be unknown");
             }
+            ExpectTop("fninit", &info, ZYAN_TRUE);
             ExpectReg("fninit", &info, ZYDIS_REGISTER_ST0, ZYDIS_OPERAND_ACTION_WRITE);
             ExpectReg("fninit", &info, ZYDIS_REGISTER_ST7, ZYDIS_OPERAND_ACTION_WRITE);
             ExpectReg("fninit", &info, ZYDIS_REGISTER_MM0, ZYDIS_OPERAND_ACTION_WRITE);
@@ -388,6 +413,7 @@ int main(void)
             {
                 Fail("fptan", "delta should be unknown");
             }
+            ExpectTop("fptan", &info, ZYAN_TRUE);
             ExpectReg("fptan", &info, ZYDIS_REGISTER_ST0, st0_action);
             ExpectReg("fptan", &info, ZYDIS_REGISTER_ST1,
                 ZYDIS_OPERAND_ACTION_CONDREAD_CONDWRITE);
@@ -435,6 +461,7 @@ int main(void)
             ExpectReg("fsin", &info, ZYDIS_REGISTER_MM0, ZYDIS_OPERAND_ACTION_READ_CONDWRITE);
             ExpectAbsent("fsin", &info, ZYDIS_REGISTER_ST1);
             ExpectAbsent("fsin", &info, ZYDIS_REGISTER_ST7);
+            ExpectTop("fsin", &info, ZYAN_FALSE);
         }
     }
 
@@ -492,6 +519,7 @@ int main(void)
         if (Decode("hlt", bytes, sizeof(bytes), &instruction, operands, &info))
         {
             ExpectFlow("hlt", &info, ZYDIS_INSTRUCTION_FLOW_PRIVILEGED);
+            ExpectIntercept("hlt", &info, ZYDIS_INSTRUCTION_INTERCEPT_NONE);
         }
     }
 
@@ -687,6 +715,111 @@ int main(void)
             ExpectReg("add al, cl 16", &info, ZYDIS_REGISTER_AX, ZYDIS_OPERAND_ACTION_READWRITE);
             ExpectAbsent("add al, cl 16", &info, ZYDIS_REGISTER_EAX);
             ExpectAbsent("add al, cl 16", &info, ZYDIS_REGISTER_RAX);
+        }
+    }
+
+    {
+        static const ZyanU8 bytes[] = { 0x0F, 0x77 };
+        if (Decode("emms", bytes, sizeof(bytes), &instruction, operands, &info))
+        {
+            if (info.fpu_delta_known)
+            {
+                Fail("emms", "delta should be unknown");
+            }
+            ExpectTop("emms", &info, ZYAN_FALSE);
+            ExpectReg("emms", &info, ZYDIS_REGISTER_ST0, ZYDIS_OPERAND_ACTION_WRITE);
+        }
+    }
+
+    {
+        static const ZyanU8 bytes[] = { 0xD9, 0x20 };
+        if (Decode("fldenv", bytes, sizeof(bytes), &instruction, operands, &info))
+        {
+            if (info.fpu_delta_known)
+            {
+                Fail("fldenv", "delta should be unknown");
+            }
+            ExpectTop("fldenv", &info, ZYAN_TRUE);
+            ExpectAbsent("fldenv", &info, ZYDIS_REGISTER_ST0);
+        }
+    }
+
+    {
+        static const ZyanU8 bytes[] = { 0xDD, 0x30 };
+        if (Decode("fnsave", bytes, sizeof(bytes), &instruction, operands, &info))
+        {
+            if (info.fpu_delta_known)
+            {
+                Fail("fnsave", "delta should be unknown");
+            }
+            ExpectTop("fnsave", &info, ZYAN_TRUE);
+            ExpectReg("fnsave", &info, ZYDIS_REGISTER_ST0, ZYDIS_OPERAND_ACTION_READWRITE);
+        }
+    }
+
+    {
+        static const ZyanU8 bytes[] = { 0x0F, 0xAE, 0x08 };
+        if (Decode("fxrstor", bytes, sizeof(bytes), &instruction, operands, &info))
+        {
+            ExpectTop("fxrstor", &info, ZYAN_TRUE);
+            if (info.fpu_delta_known)
+            {
+                Fail("fxrstor", "delta should be unknown");
+            }
+        }
+    }
+
+    {
+        static const ZyanU8 bytes[] = { 0xE4, 0x00 };
+        if (Decode("in al, 0", bytes, sizeof(bytes), &instruction, operands, &info))
+        {
+            ExpectFlow("in al, 0", &info, ZYDIS_INSTRUCTION_FLOW_PRIVILEGED);
+            ExpectIntercept("in al, 0", &info, ZYDIS_INSTRUCTION_INTERCEPT_IO);
+        }
+    }
+
+    {
+        static const ZyanU8 bytes[] = { 0x0F, 0x32 };
+        if (Decode("rdmsr", bytes, sizeof(bytes), &instruction, operands, &info))
+        {
+            ExpectFlow("rdmsr", &info, ZYDIS_INSTRUCTION_FLOW_PRIVILEGED);
+            ExpectIntercept("rdmsr", &info, ZYDIS_INSTRUCTION_INTERCEPT_MSR);
+        }
+    }
+
+    {
+        static const ZyanU8 bytes[] = { 0x0F, 0x01, 0x10 };
+        if (Decode("lgdt", bytes, sizeof(bytes), &instruction, operands, &info))
+        {
+            ExpectFlow("lgdt", &info, ZYDIS_INSTRUCTION_FLOW_PRIVILEGED);
+            ExpectIntercept("lgdt", &info, ZYDIS_INSTRUCTION_INTERCEPT_DESCRIPTOR);
+        }
+    }
+
+    {
+        static const ZyanU8 bytes[] = { 0x0F, 0x78, 0xC0 };
+        if (Decode("vmread", bytes, sizeof(bytes), &instruction, operands, &info))
+        {
+            ExpectFlow("vmread", &info, ZYDIS_INSTRUCTION_FLOW_PRIVILEGED);
+            ExpectIntercept("vmread", &info, ZYDIS_INSTRUCTION_INTERCEPT_VMX);
+        }
+    }
+
+    {
+        static const ZyanU8 bytes[] = { 0x0F, 0x01, 0xD8 };
+        if (Decode("vmrun", bytes, sizeof(bytes), &instruction, operands, &info))
+        {
+            ExpectFlow("vmrun", &info, ZYDIS_INSTRUCTION_FLOW_PRIVILEGED);
+            ExpectIntercept("vmrun", &info, ZYDIS_INSTRUCTION_INTERCEPT_SVM);
+        }
+    }
+
+    {
+        static const ZyanU8 bytes[] = { 0x0F, 0x20, 0xC0 };
+        if (Decode("mov rax, cr0", bytes, sizeof(bytes), &instruction, operands, &info))
+        {
+            ExpectFlow("mov rax, cr0", &info, ZYDIS_INSTRUCTION_FLOW_NEXT);
+            ExpectIntercept("mov rax, cr0", &info, ZYDIS_INSTRUCTION_INTERCEPT_NONE);
         }
     }
 

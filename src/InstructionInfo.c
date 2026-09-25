@@ -647,6 +647,46 @@ static void ZydisInfoSetFlow(const ZydisDecodedInstruction* instruction,
     }
 }
 
+static ZydisInstructionIntercept ZydisInfoIntercept(const ZydisDecodedInstruction* instruction)
+{
+    switch (instruction->meta.category)
+    {
+    case ZYDIS_CATEGORY_IO:
+    case ZYDIS_CATEGORY_IOSTRINGOP:
+        return ZYDIS_INSTRUCTION_INTERCEPT_IO;
+    case ZYDIS_CATEGORY_VTX:
+        return ZYDIS_INSTRUCTION_INTERCEPT_VMX;
+    case ZYDIS_CATEGORY_MSRLIST:
+    case ZYDIS_CATEGORY_WRMSRNS:
+        return ZYDIS_INSTRUCTION_INTERCEPT_MSR;
+    default:
+        break;
+    }
+
+    if (instruction->meta.isa_ext == ZYDIS_ISA_EXT_SVM)
+    {
+        return ZYDIS_INSTRUCTION_INTERCEPT_SVM;
+    }
+
+    switch (instruction->mnemonic)
+    {
+    case ZYDIS_MNEMONIC_RDMSR:
+    case ZYDIS_MNEMONIC_WRMSR:
+        return ZYDIS_INSTRUCTION_INTERCEPT_MSR;
+    case ZYDIS_MNEMONIC_LGDT:
+    case ZYDIS_MNEMONIC_SGDT:
+    case ZYDIS_MNEMONIC_LIDT:
+    case ZYDIS_MNEMONIC_SIDT:
+    case ZYDIS_MNEMONIC_LLDT:
+    case ZYDIS_MNEMONIC_SLDT:
+    case ZYDIS_MNEMONIC_LTR:
+    case ZYDIS_MNEMONIC_STR:
+        return ZYDIS_INSTRUCTION_INTERCEPT_DESCRIPTOR;
+    default:
+        return ZYDIS_INSTRUCTION_INTERCEPT_NONE;
+    }
+}
+
 static void ZydisInfoSetStack(const ZydisDecodedInstruction* instruction,
     const ZydisDecodedOperand* operands, ZyanU8 operand_count, ZydisInstructionInfo* info)
 {
@@ -762,6 +802,23 @@ static void ZydisInfoSetFpu(const ZydisDecodedInstruction* instruction, ZydisIns
 
     info->fpu_delta_known = ZYAN_FALSE;
     info->fpu_delta = 0;
+    info->fpu_top_written = ZYAN_FALSE;
+
+    /*
+     * emms and femms empty the tag word and leave TOP unchanged. Every other
+     * counted stack op writes TOP. fldenv and fxrstor load a new TOP without
+     * a constant push or pop, so the delta stays unknown.
+     */
+    if ((instruction->mnemonic != ZYDIS_MNEMONIC_EMMS) &&
+        (instruction->mnemonic != ZYDIS_MNEMONIC_FEMMS) &&
+        ((kind != 0) ||
+            (instruction->mnemonic == ZYDIS_MNEMONIC_FLDENV) ||
+            (instruction->mnemonic == ZYDIS_MNEMONIC_FXRSTOR) ||
+            (instruction->mnemonic == ZYDIS_MNEMONIC_FXRSTOR64)))
+    {
+        info->fpu_top_written = ZYAN_TRUE;
+    }
+
     if (conditional || (kind == 0) || (kind == 4) || (kind == 5))
     {
         return;
@@ -905,6 +962,7 @@ ZyanStatus ZydisGetInstructionInfo(const ZydisDecodedInstruction* instruction,
 
     ZYAN_MEMSET(info, 0, sizeof(*info));
     ZydisInfoSetFlow(instruction, operands, operand_count, info);
+    info->intercept = ZydisInfoIntercept(instruction);
     ZydisInfoSetStack(instruction, operands, operand_count, info);
     ZydisInfoSetFpu(instruction, info);
 
