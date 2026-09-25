@@ -34,6 +34,19 @@
 
 #include <Generated/FormatterStrings.inc>
 
+ZYDIS_MAKE_SHORTSTRING(RETF, "retf");
+ZYDIS_MAKE_SHORTSTRING(ST_MASM_OPEN, "st(");
+ZYDIS_MAKE_SHORTSTRING(ST_MASM_CLOSE, ")");
+ZYDIS_MAKE_SHORTSTRING(SIZE_8_NASM, "byte");
+ZYDIS_MAKE_SHORTSTRING(SIZE_16_NASM, "word");
+ZYDIS_MAKE_SHORTSTRING(SIZE_32_NASM, "dword");
+ZYDIS_MAKE_SHORTSTRING(SIZE_48_NASM, "fword");
+ZYDIS_MAKE_SHORTSTRING(SIZE_64_NASM, "qword");
+ZYDIS_MAKE_SHORTSTRING(SIZE_80_NASM, "tword");
+ZYDIS_MAKE_SHORTSTRING(SIZE_128_NASM, "oword");
+ZYDIS_MAKE_SHORTSTRING(SIZE_256_NASM, "yword");
+ZYDIS_MAKE_SHORTSTRING(SIZE_512_NASM, "zword");
+
 /* ============================================================================================== */
 /* Formatter functions                                                                            */
 /* ============================================================================================== */
@@ -286,8 +299,16 @@ ZyanStatus ZydisFormatterIntelFormatOperandMEM(const ZydisFormatter* formatter,
     return ZYAN_STATUS_SUCCESS;
 }
 
-ZyanStatus ZydisFormatterIntelPrintMnemonic(const ZydisFormatter* formatter,
-    ZydisFormatterBuffer* buffer, ZydisFormatterContext* context)
+static ZyanBool ZydisFormatterIntelIsFarRet(const ZydisDecodedInstruction* instruction)
+{
+    return (instruction->mnemonic == ZYDIS_MNEMONIC_RET) &&
+        (instruction->meta.branch_type == ZYDIS_BRANCH_TYPE_FAR) &&
+        (instruction->opcode_map == ZYDIS_OPCODE_MAP_DEFAULT) &&
+        ((instruction->opcode == 0xCB) || (instruction->opcode == 0xCA));
+}
+
+static ZyanStatus ZydisFormatterIntelPrintMnemonicInternal(const ZydisFormatter* formatter,
+    ZydisFormatterBuffer* buffer, ZydisFormatterContext* context, ZyanBool far_ret_as_retf)
 {
     ZYAN_ASSERT(formatter);
     ZYAN_ASSERT(buffer);
@@ -295,6 +316,14 @@ ZyanStatus ZydisFormatterIntelPrintMnemonic(const ZydisFormatter* formatter,
 
     const ZydisShortString* mnemonic = ZydisMnemonicGetStringWrapped(
         context->instruction->mnemonic);
+    ZyanBool suppress_far = ZYAN_FALSE;
+
+    if (far_ret_as_retf && ZydisFormatterIntelIsFarRet(context->instruction))
+    {
+        mnemonic = ZYDIS_SHORTSTRING(RETF);
+        suppress_far = ZYAN_TRUE;
+    }
+
     if (!mnemonic)
     {
         ZYDIS_BUFFER_APPEND_CASE(buffer, INVALID_MNEMONIC, formatter->case_mnemonic);
@@ -306,12 +335,14 @@ ZyanStatus ZydisFormatterIntelPrintMnemonic(const ZydisFormatter* formatter,
 
     if (formatter->deco_apx_nf_use_suffix && context->instruction->apx.has_nf)
     {
-        ZYAN_CHECK(ZydisStringAppendShortCase(&buffer->string, ZYDIS_SHORTSTRING(NF), formatter->case_mnemonic));
+        ZYAN_CHECK(ZydisStringAppendShortCase(&buffer->string, ZYDIS_SHORTSTRING(NF),
+            formatter->case_mnemonic));
     }
 
-    if (context->instruction->meta.branch_type == ZYDIS_BRANCH_TYPE_FAR)
+    if (!suppress_far && (context->instruction->meta.branch_type == ZYDIS_BRANCH_TYPE_FAR))
     {
-        return ZydisStringAppendShortCase(&buffer->string, ZYDIS_SHORTSTRING(FAR), formatter->case_mnemonic);
+        return ZydisStringAppendShortCase(&buffer->string, ZYDIS_SHORTSTRING(FAR),
+            formatter->case_mnemonic);
     }
 
     if (formatter->print_branch_size)
@@ -333,6 +364,12 @@ ZyanStatus ZydisFormatterIntelPrintMnemonic(const ZydisFormatter* formatter,
     }
 
     return ZYAN_STATUS_SUCCESS;
+}
+
+ZyanStatus ZydisFormatterIntelPrintMnemonic(const ZydisFormatter* formatter,
+    ZydisFormatterBuffer* buffer, ZydisFormatterContext* context)
+{
+    return ZydisFormatterIntelPrintMnemonicInternal(formatter, buffer, context, ZYAN_FALSE);
 }
 
 ZyanStatus ZydisFormatterIntelPrintRegister(const ZydisFormatter* formatter,
@@ -535,6 +572,86 @@ ZyanStatus ZydisFormatterIntelPrintDecoratorMASM(const ZydisFormatter* formatter
 
     return ZydisFormatterBasePrintDecorator(formatter, buffer, context, decorator);
 }
+
+ZyanStatus ZydisFormatterIntelPrintMnemonicMASM(const ZydisFormatter* formatter,
+    ZydisFormatterBuffer* buffer, ZydisFormatterContext* context)
+{
+    return ZydisFormatterIntelPrintMnemonicInternal(formatter, buffer, context, ZYAN_TRUE);
+}
+
+ZyanStatus ZydisFormatterIntelPrintRegisterMASM(const ZydisFormatter* formatter,
+    ZydisFormatterBuffer* buffer, ZydisFormatterContext* context, ZydisRegister reg)
+{
+    ZYAN_ASSERT(formatter);
+    ZYAN_ASSERT(buffer);
+    ZYAN_ASSERT(context);
+
+    if ((reg >= ZYDIS_REGISTER_ST0) && (reg <= ZYDIS_REGISTER_ST7))
+    {
+        ZYDIS_BUFFER_APPEND_TOKEN(buffer, ZYDIS_TOKEN_REGISTER);
+        ZYAN_CHECK(ZydisStringAppendShortCase(&buffer->string, ZYDIS_SHORTSTRING(ST_MASM_OPEN),
+            formatter->case_registers));
+        ZYAN_CHECK(ZydisStringAppendDecU(&buffer->string, (ZyanU64)(reg - ZYDIS_REGISTER_ST0), 0,
+            ZYAN_NULL, ZYAN_NULL));
+        return ZydisStringAppendShort(&buffer->string, ZYDIS_SHORTSTRING(ST_MASM_CLOSE));
+    }
+
+    return ZydisFormatterIntelPrintRegister(formatter, buffer, context, reg);
+}
+
+/* ---------------------------------------------------------------------------------------------- */
+/* NASM                                                                                           */
+/* ---------------------------------------------------------------------------------------------- */
+
+ZyanStatus ZydisFormatterIntelPrintMnemonicNASM(const ZydisFormatter* formatter,
+    ZydisFormatterBuffer* buffer, ZydisFormatterContext* context)
+{
+    return ZydisFormatterIntelPrintMnemonicInternal(formatter, buffer, context, ZYAN_TRUE);
+}
+
+static ZyanStatus ZydisFormatterIntelAppendSizeNASM(const ZydisFormatter* formatter,
+    ZydisFormatterBuffer* buffer, const ZydisShortString* name)
+{
+    ZYDIS_BUFFER_APPEND_TOKEN(buffer, ZYDIS_TOKEN_TYPECAST);
+    ZYAN_CHECK(ZydisStringAppendShortCase(&buffer->string, name, formatter->case_typecasts));
+    ZYDIS_BUFFER_APPEND_TOKEN(buffer, ZYDIS_TOKEN_WHITESPACE);
+    return ZydisStringAppendShort(&buffer->string, ZYDIS_SHORTSTRING(WHITESPACE));
+}
+
+ZyanStatus ZydisFormatterIntelPrintTypecastNASM(const ZydisFormatter* formatter,
+    ZydisFormatterBuffer* buffer, ZydisFormatterContext* context)
+{
+    ZYAN_ASSERT(formatter);
+    ZYAN_ASSERT(buffer);
+    ZYAN_ASSERT(context);
+
+    switch (ZydisFormatterHelperGetExplicitSize(formatter, context, context->operand))
+    {
+    case   8:
+        return ZydisFormatterIntelAppendSizeNASM(formatter, buffer, ZYDIS_SHORTSTRING(SIZE_8_NASM));
+    case  16:
+        return ZydisFormatterIntelAppendSizeNASM(formatter, buffer, ZYDIS_SHORTSTRING(SIZE_16_NASM));
+    case  32:
+        return ZydisFormatterIntelAppendSizeNASM(formatter, buffer, ZYDIS_SHORTSTRING(SIZE_32_NASM));
+    case  48:
+        return ZydisFormatterIntelAppendSizeNASM(formatter, buffer, ZYDIS_SHORTSTRING(SIZE_48_NASM));
+    case  64:
+        return ZydisFormatterIntelAppendSizeNASM(formatter, buffer, ZYDIS_SHORTSTRING(SIZE_64_NASM));
+    case  80:
+        return ZydisFormatterIntelAppendSizeNASM(formatter, buffer, ZYDIS_SHORTSTRING(SIZE_80_NASM));
+    case 128:
+        return ZydisFormatterIntelAppendSizeNASM(formatter, buffer, ZYDIS_SHORTSTRING(SIZE_128_NASM));
+    case 256:
+        return ZydisFormatterIntelAppendSizeNASM(formatter, buffer, ZYDIS_SHORTSTRING(SIZE_256_NASM));
+    case 512:
+        return ZydisFormatterIntelAppendSizeNASM(formatter, buffer, ZYDIS_SHORTSTRING(SIZE_512_NASM));
+    default:
+        break;
+    }
+
+    return ZYAN_STATUS_SUCCESS;
+}
+
 
 /* ---------------------------------------------------------------------------------------------- */
 

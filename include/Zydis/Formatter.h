@@ -80,11 +80,18 @@ typedef enum ZydisFormatterStyle_
      * The runtime-address is ignored in this mode.
      */
     ZYDIS_FORMATTER_STYLE_INTEL_MASM,
+    /**
+     * Generates `NASM`-style disassembly.
+     *
+     * Memory operands print a size keyword without `ptr` (`dword [rax]`).
+     * Hex immediates use a `0x` prefix. Far `ret` (opcode `CB`) prints `retf`.
+     */
+    ZYDIS_FORMATTER_STYLE_NASM,
 
     /**
      * Maximum value of this enum.
      */
-    ZYDIS_FORMATTER_STYLE_MAX_VALUE = ZYDIS_FORMATTER_STYLE_INTEL_MASM,
+    ZYDIS_FORMATTER_STYLE_MAX_VALUE = ZYDIS_FORMATTER_STYLE_NASM,
     /**
      * The minimum number of bits required to represent all values of this enum.
      */

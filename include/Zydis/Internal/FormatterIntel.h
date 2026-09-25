@@ -26,7 +26,7 @@
 
 /**
  * @file
- * Implements the `INTEL` style instruction-formatter.
+ * Implements the `INTEL`, `MASM`, and `NASM` style instruction-formatters.
  */
 
 #ifndef ZYDIS_FORMATTER_INTEL_H
@@ -81,6 +81,22 @@ ZyanStatus ZydisFormatterIntelPrintTypecastMASM(const ZydisFormatter* formatter,
 
 ZyanStatus ZydisFormatterIntelPrintDecoratorMASM(const ZydisFormatter* formatter,
     ZydisFormatterBuffer* buffer, ZydisFormatterContext* context, ZydisDecorator decorator);
+
+ZyanStatus ZydisFormatterIntelPrintMnemonicMASM(const ZydisFormatter* formatter,
+    ZydisFormatterBuffer* buffer, ZydisFormatterContext* context);
+
+ZyanStatus ZydisFormatterIntelPrintRegisterMASM(const ZydisFormatter* formatter,
+    ZydisFormatterBuffer* buffer, ZydisFormatterContext* context, ZydisRegister reg);
+
+/* ---------------------------------------------------------------------------------------------- */
+/* NASM                                                                                           */
+/* ---------------------------------------------------------------------------------------------- */
+
+ZyanStatus ZydisFormatterIntelPrintMnemonicNASM(const ZydisFormatter* formatter,
+    ZydisFormatterBuffer* buffer, ZydisFormatterContext* context);
+
+ZyanStatus ZydisFormatterIntelPrintTypecastNASM(const ZydisFormatter* formatter,
+    ZydisFormatterBuffer* buffer, ZydisFormatterContext* context);
 
 /* ---------------------------------------------------------------------------------------------- */
 
@@ -258,8 +274,8 @@ static const ZydisFormatter FORMATTER_INTEL_MASM =
     /* func_format_operand_mem    */ &ZydisFormatterIntelFormatOperandMEM,
     /* func_format_operand_ptr    */ &ZydisFormatterBaseFormatOperandPTR,
     /* func_format_operand_imm    */ &ZydisFormatterBaseFormatOperandIMM,
-    /* func_print_mnemonic        */ &ZydisFormatterIntelPrintMnemonic,
-    /* func_print_register        */ &ZydisFormatterIntelPrintRegister,
+    /* func_print_mnemonic        */ &ZydisFormatterIntelPrintMnemonicMASM,
+    /* func_print_register        */ &ZydisFormatterIntelPrintRegisterMASM,
     /* func_print_address_abs     */ &ZydisFormatterIntelPrintAddressMASM,
     /* func_print_address_rel     */ &ZydisFormatterIntelPrintAddressMASM,
     /* func_print_disp            */ &ZydisFormatterIntelPrintDISP,
@@ -268,6 +284,97 @@ static const ZydisFormatter FORMATTER_INTEL_MASM =
     /* func_print_segment         */ &ZydisFormatterBasePrintSegment,
     /* func_print_prefixes        */ &ZydisFormatterBasePrintPrefixes,
     /* func_print_decorator       */ &ZydisFormatterIntelPrintDecoratorMASM
+};
+
+/* ---------------------------------------------------------------------------------------------- */
+/* NASM                                                                                           */
+/* ---------------------------------------------------------------------------------------------- */
+
+/**
+ * The default formatter configuration for `NASM` style disassembly.
+ */
+static const ZydisFormatter FORMATTER_NASM =
+{
+    /* style                      */ ZYDIS_FORMATTER_STYLE_NASM,
+    /* force_memory_size          */ ZYAN_FALSE,
+    /* force_memory_seg           */ ZYAN_FALSE,
+    /* force_memory_scale         */ ZYAN_TRUE,
+    /* force_relative_branches    */ ZYAN_FALSE,
+    /* force_relative_riprel      */ ZYAN_FALSE,
+    /* print_branch_size          */ ZYAN_FALSE,
+    /* detailed_prefixes          */ ZYAN_FALSE,
+    /* addr_base                  */ ZYDIS_NUMERIC_BASE_HEX,
+    /* addr_signedness            */ ZYDIS_SIGNEDNESS_SIGNED,
+    /* addr_padding_absolute      */ ZYDIS_PADDING_AUTO,
+    /* addr_padding_relative      */ 2,
+    /* disp_base                  */ ZYDIS_NUMERIC_BASE_HEX,
+    /* disp_signedness            */ ZYDIS_SIGNEDNESS_SIGNED,
+    /* disp_padding               */ 2,
+    /* imm_base                   */ ZYDIS_NUMERIC_BASE_HEX,
+    /* imm_signedness             */ ZYDIS_SIGNEDNESS_UNSIGNED,
+    /* imm_padding                */ 2,
+    /* case_prefixes              */ ZYDIS_LETTER_CASE_DEFAULT,
+    /* case_mnemonic              */ ZYDIS_LETTER_CASE_DEFAULT,
+    /* case_registers             */ ZYDIS_LETTER_CASE_DEFAULT,
+    /* case_typecasts             */ ZYDIS_LETTER_CASE_DEFAULT,
+    /* case_decorators            */ ZYDIS_LETTER_CASE_DEFAULT,
+    /* hex_uppercase              */ ZYAN_TRUE,
+    /* hex_force_leading_number   */ ZYAN_FALSE,
+    /* number_format              */
+    {
+        // ZYDIS_NUMERIC_BASE_DEC
+        {
+            // Prefix
+            {
+                /* string         */ ZYAN_NULL,
+                /* string_data    */ ZYAN_DEFINE_STRING_VIEW(""),
+                /* buffer         */ { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+            },
+            // Suffix
+            {
+                /* string         */ ZYAN_NULL,
+                /* string_data    */ ZYAN_DEFINE_STRING_VIEW(""),
+                /* buffer         */ { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+            }
+        },
+        // ZYDIS_NUMERIC_BASE_HEX
+        {
+            // Prefix
+            {
+                /* string         */ &FORMATTER_NASM.number_format[
+                                       ZYDIS_NUMERIC_BASE_HEX][0].string_data,
+                /* string_data    */ ZYAN_DEFINE_STRING_VIEW("0x"),
+                /* buffer         */ { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+            },
+            // Suffix
+            {
+                /* string         */ ZYAN_NULL,
+                /* string_data    */ ZYAN_DEFINE_STRING_VIEW(""),
+                /* buffer         */ { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+            }
+        }
+    },
+    /* deco_apx_nf_use_suffix     */ ZYAN_FALSE,
+    /* deco_apx_dfv_use_immediate */ ZYAN_FALSE,
+    /* func_pre_instruction       */ ZYAN_NULL,
+    /* func_post_instruction      */ ZYAN_NULL,
+    /* func_format_instruction    */ &ZydisFormatterIntelFormatInstruction,
+    /* func_pre_operand           */ ZYAN_NULL,
+    /* func_post_operand          */ ZYAN_NULL,
+    /* func_format_operand_reg    */ &ZydisFormatterBaseFormatOperandREG,
+    /* func_format_operand_mem    */ &ZydisFormatterIntelFormatOperandMEM,
+    /* func_format_operand_ptr    */ &ZydisFormatterBaseFormatOperandPTR,
+    /* func_format_operand_imm    */ &ZydisFormatterBaseFormatOperandIMM,
+    /* func_print_mnemonic        */ &ZydisFormatterIntelPrintMnemonicNASM,
+    /* func_print_register        */ &ZydisFormatterIntelPrintRegister,
+    /* func_print_address_abs     */ &ZydisFormatterBasePrintAddressABS,
+    /* func_print_address_rel     */ &ZydisFormatterBasePrintAddressREL,
+    /* func_print_disp            */ &ZydisFormatterIntelPrintDISP,
+    /* func_print_imm             */ &ZydisFormatterBasePrintIMM,
+    /* func_print_typecast        */ &ZydisFormatterIntelPrintTypecastNASM,
+    /* func_print_segment         */ &ZydisFormatterBasePrintSegment,
+    /* func_print_prefixes        */ &ZydisFormatterBasePrintPrefixes,
+    /* func_print_decorator       */ &ZydisFormatterBasePrintDecorator
 };
 
 /* ---------------------------------------------------------------------------------------------- */

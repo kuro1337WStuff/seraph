@@ -181,9 +181,11 @@ if decoder.enabled()
     'src/Decoder.c',
     'src/DecoderData.c',
     'src/InstructionInfo.c',
+    'src/OpcodeInfo.c',
   )
   hdrs_common += files(
     'include/Zydis/InstructionInfo.h',
+    'include/Zydis/OpcodeInfo.h',
   )
 endif
 

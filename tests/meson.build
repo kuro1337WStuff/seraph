@@ -16,6 +16,18 @@ if tests_req and decoder.enabled() and minimal.disabled()
     dependencies: [zydis_dep],
   )
   test('SeraphInstructionInfo', instruction_info)
+  nasm_formatter = executable(
+    'SeraphNasmFormatter',
+    'nasm_formatter.c',
+    dependencies: [zydis_dep],
+  )
+  test('SeraphNasmFormatter', nasm_formatter)
+  opcode_info = executable(
+    'SeraphOpcodeInfo',
+    'opcode_info.c',
+    dependencies: [zydis_dep],
+  )
+  test('SeraphOpcodeInfo', opcode_info)
 endif
 
 if tests_req

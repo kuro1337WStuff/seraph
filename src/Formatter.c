@@ -42,7 +42,8 @@ static const ZydisFormatter* const FORMATTER_PRESETS[ZYDIS_FORMATTER_STYLE_MAX_V
 {
     &FORMATTER_ATT,
     &FORMATTER_INTEL,
-    &FORMATTER_INTEL_MASM
+    &FORMATTER_INTEL_MASM,
+    &FORMATTER_NASM
 };
 
 /* ---------------------------------------------------------------------------------------------- */

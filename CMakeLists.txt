@@ -251,7 +251,9 @@ if (ZYDIS_FEATURE_DECODER)
             "src/Decoder.c"
             "src/DecoderData.c"
             "${CMAKE_CURRENT_LIST_DIR}/include/Zydis/InstructionInfo.h"
-            "src/InstructionInfo.c")
+            "src/InstructionInfo.c"
+            "${CMAKE_CURRENT_LIST_DIR}/include/Zydis/OpcodeInfo.h"
+            "src/OpcodeInfo.c")
     if (ZYDIS_FEATURE_ENCODER)
         target_sources("Zydis"
             PRIVATE
@@ -575,5 +577,21 @@ if (ZYDIS_BUILD_TESTS)
         target_compile_definitions("SeraphInstructionInfo" PRIVATE "_CRT_SECURE_NO_WARNINGS")
         zyan_set_common_flags("SeraphInstructionInfo")
         add_test(NAME "SeraphInstructionInfo" COMMAND "SeraphInstructionInfo")
+    endif ()
+
+    if (ZYDIS_FEATURE_DECODER AND NOT ZYAN_NO_LIBC AND NOT ZYDIS_MINIMAL_MODE)
+        add_executable("SeraphNasmFormatter" "tests/nasm_formatter.c")
+        target_link_libraries("SeraphNasmFormatter" PUBLIC "Zydis")
+        target_compile_definitions("SeraphNasmFormatter" PRIVATE "_CRT_SECURE_NO_WARNINGS")
+        zyan_set_common_flags("SeraphNasmFormatter")
+        add_test(NAME "SeraphNasmFormatter" COMMAND "SeraphNasmFormatter")
+    endif ()
+
+    if (ZYDIS_FEATURE_DECODER AND NOT ZYAN_NO_LIBC AND NOT ZYDIS_MINIMAL_MODE)
+        add_executable("SeraphOpcodeInfo" "tests/opcode_info.c")
+        target_link_libraries("SeraphOpcodeInfo" PUBLIC "Zydis")
+        target_compile_definitions("SeraphOpcodeInfo" PRIVATE "_CRT_SECURE_NO_WARNINGS")
+        zyan_set_common_flags("SeraphOpcodeInfo")
+        add_test(NAME "SeraphOpcodeInfo" COMMAND "SeraphOpcodeInfo")
     endif ()
 endif ()
