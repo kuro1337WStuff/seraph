@@ -387,6 +387,47 @@ int main(void)
     }
 
     {
+        static const ZyanU8 bytes[] = { 0x67, 0x8B, 0x00 };
+        if (Decode("mov eax, [eax]", bytes, sizeof(bytes), &instruction, operands, &info))
+        {
+            ExpectReg("mov eax, [eax]", &info, ZYDIS_REGISTER_EAX, ZYDIS_OPERAND_ACTION_READWRITE);
+            ExpectReg("mov eax, [eax]", &info, ZYDIS_REGISTER_RAX,
+                (ZydisOperandActions)(ZYDIS_OPERAND_ACTION_READ | ZYDIS_OPERAND_ACTION_WRITE));
+        }
+    }
+
+    {
+        static const ZyanU8 bytes[] = { 0x67, 0x0F, 0x44, 0x00 };
+        if (Decode("cmovz eax, [eax]", bytes, sizeof(bytes), &instruction, operands, &info))
+        {
+            ExpectReg("cmovz eax, [eax]", &info, ZYDIS_REGISTER_RAX,
+                (ZydisOperandActions)(ZYDIS_OPERAND_ACTION_READ | ZYDIS_OPERAND_ACTION_WRITE |
+                    ZYDIS_OPERAND_ACTION_CONDREAD));
+        }
+    }
+
+    {
+        static const ZyanU8 bytes[] = { 0x0F, 0xB0, 0xC8 };
+        if (Decode("cmpxchg al, cl", bytes, sizeof(bytes), &instruction, operands, &info))
+        {
+            ExpectReg("cmpxchg al, cl", &info, ZYDIS_REGISTER_AX,
+                (ZydisOperandActions)(ZYDIS_OPERAND_ACTION_READ | ZYDIS_OPERAND_ACTION_CONDWRITE));
+            ExpectReg("cmpxchg al, cl", &info, ZYDIS_REGISTER_RAX,
+                (ZydisOperandActions)(ZYDIS_OPERAND_ACTION_READ | ZYDIS_OPERAND_ACTION_CONDWRITE));
+            ExpectAbsent("cmpxchg al, cl", &info, ZYDIS_REGISTER_AH);
+        }
+    }
+
+    {
+        static const ZyanU8 bytes[] = { 0x0F, 0x44, 0xC1 };
+        if (Decode("cmovz eax, ecx", bytes, sizeof(bytes), &instruction, operands, &info))
+        {
+            ExpectReg("cmovz eax, ecx", &info, ZYDIS_REGISTER_RAX,
+                (ZydisOperandActions)(ZYDIS_OPERAND_ACTION_WRITE | ZYDIS_OPERAND_ACTION_CONDREAD));
+        }
+    }
+
+    {
         static const ZyanU8 bytes[] = { 0x01, 0xC8 };
         if (Decode("add eax, ecx", bytes, sizeof(bytes), &instruction, operands, &info))
         {

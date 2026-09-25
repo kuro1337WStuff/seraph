@@ -176,7 +176,7 @@ static ZyanU64 ZydisInfoGprMask(ZyanU8 width, ZyanBool high_byte)
 }
 
 static ZyanStatus ZydisInfoAddGpr(ZydisInstructionInfo* info, ZydisMachineMode mode,
-    ZydisRegister reg, ZydisOperandActions action)
+    ZydisMnemonic mnemonic, ZydisRegister reg, ZydisOperandActions action)
 {
     ZyanU8 family;
     ZyanU8 width;
@@ -246,13 +246,43 @@ static ZyanStatus ZydisInfoAddGpr(ZydisInstructionInfo* info, ZydisMachineMode m
             else if (write_bits && (width == 32) && (bits == 64) &&
                 (mode == ZYDIS_MACHINE_MODE_LONG_64))
             {
-                derived = write_bits;
+                if (write_bits & ZYDIS_OPERAND_ACTION_WRITE)
+                {
+                    derived = write_bits;
+                }
+                else if ((mnemonic >= ZYDIS_MNEMONIC_CMOVB) &&
+                    (mnemonic <= ZYDIS_MNEMONIC_CMOVZ))
+                {
+                    /* The upper half is cleared even when the move is not taken. */
+                    derived = (ZydisOperandActions)(ZYDIS_OPERAND_ACTION_WRITE |
+                        ZYDIS_OPERAND_ACTION_CONDREAD);
+                }
+                else
+                {
+                    derived = (ZydisOperandActions)(read_bits | ZYDIS_OPERAND_ACTION_CONDWRITE);
+                    if (derived & ZYDIS_OPERAND_ACTION_READ)
+                    {
+                        derived = (ZydisOperandActions)(derived & ~ZYDIS_OPERAND_ACTION_CONDREAD);
+                    }
+                }
             }
             else if (write_bits)
             {
-                derived = (write_bits & ZYDIS_OPERAND_ACTION_WRITE)
-                    ? (ZydisOperandActions)(ZYDIS_OPERAND_ACTION_READ | write_bits)
-                    : (ZydisOperandActions)(ZYDIS_OPERAND_ACTION_CONDREAD | write_bits);
+                /*
+                 * A partial update reads the rest of the register on every path:
+                 * the other bits are merged in if the write happens, and the old
+                 * value is kept if it does not.
+                 */
+                derived = (ZydisOperandActions)(read_bits | write_bits |
+                    ZYDIS_OPERAND_ACTION_READ);
+                if (derived & ZYDIS_OPERAND_ACTION_READ)
+                {
+                    derived = (ZydisOperandActions)(derived & ~ZYDIS_OPERAND_ACTION_CONDREAD);
+                }
+                if (derived & ZYDIS_OPERAND_ACTION_WRITE)
+                {
+                    derived = (ZydisOperandActions)(derived & ~ZYDIS_OPERAND_ACTION_CONDWRITE);
+                }
             }
             else
             {
@@ -491,8 +521,8 @@ ZyanStatus ZydisGetInstructionInfo(const ZydisDecodedInstruction* instruction,
 
         if (operand->type == ZYDIS_OPERAND_TYPE_REGISTER)
         {
-            status = ZydisInfoAddGpr(info, instruction->machine_mode, operand->reg.value,
-                operand->actions);
+            status = ZydisInfoAddGpr(info, instruction->machine_mode, instruction->mnemonic,
+                operand->reg.value, operand->actions);
             if (ZYAN_FAILED(status))
             {
                 return status;
@@ -518,14 +548,14 @@ ZyanStatus ZydisGetInstructionInfo(const ZydisDecodedInstruction* instruction,
             info->memory[info->memory_count].action = operand->actions;
             ++info->memory_count;
 
-            status = ZydisInfoAddGpr(info, instruction->machine_mode, operand->mem.base,
-                ZYDIS_OPERAND_ACTION_READ);
+            status = ZydisInfoAddGpr(info, instruction->machine_mode, instruction->mnemonic,
+                operand->mem.base, ZYDIS_OPERAND_ACTION_READ);
             if (ZYAN_FAILED(status))
             {
                 return status;
             }
-            status = ZydisInfoAddGpr(info, instruction->machine_mode, operand->mem.index,
-                ZYDIS_OPERAND_ACTION_READ);
+            status = ZydisInfoAddGpr(info, instruction->machine_mode, instruction->mnemonic,
+                operand->mem.index, ZYDIS_OPERAND_ACTION_READ);
             if (ZYAN_FAILED(status))
             {
                 return status;
@@ -539,9 +569,10 @@ ZyanStatus ZydisGetInstructionInfo(const ZydisDecodedInstruction* instruction,
     }
 
     /*
-     * A later read of the same 32-bit register must not stick READ onto the
-     * 64-bit register that a zero-extending write already defined. A direct
-     * read of that 64-bit register, including as a memory base or index, stays.
+     * A read-write of the 32-bit register itself must not stick READ onto the
+     * 64-bit register: that write zero-extends and the upper half is not read.
+     * A separate use of the value as an address does read it, whether the
+     * base or index is the 32-bit name or the 64-bit name.
      */
     if (instruction->machine_mode == ZYDIS_MACHINE_MODE_LONG_64)
     {
@@ -593,14 +624,25 @@ ZyanStatus ZydisGetInstructionInfo(const ZydisDecodedInstruction* instruction,
                 }
                 if ((operands[j].type == ZYDIS_OPERAND_TYPE_MEMORY) &&
                     ((operands[j].mem.base == info->registers[i].reg) ||
-                        (operands[j].mem.index == info->registers[i].reg)))
+                        (operands[j].mem.index == info->registers[i].reg) ||
+                        (operands[j].mem.base == gpr32) ||
+                        (operands[j].mem.index == gpr32)))
                 {
                     direct_read = ZYAN_TRUE;
                 }
             }
             if (!direct_read)
             {
-                info->registers[i].action = write_bits;
+                if (write_bits & ZYDIS_OPERAND_ACTION_WRITE)
+                {
+                    info->registers[i].action = write_bits;
+                }
+                else if ((instruction->mnemonic >= ZYDIS_MNEMONIC_CMOVB) &&
+                    (instruction->mnemonic <= ZYDIS_MNEMONIC_CMOVZ))
+                {
+                    info->registers[i].action = (ZydisOperandActions)(ZYDIS_OPERAND_ACTION_WRITE |
+                        ZYDIS_OPERAND_ACTION_CONDREAD);
+                }
             }
         }
     }
