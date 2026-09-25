@@ -199,6 +199,12 @@ if encoder.enabled()
   src += files(
     'src/Encoder.c',
     'src/EncoderData.c',
+    'src/BlockEncoder.c',
+    'src/Assembler.c',
+  )
+  hdrs_common += files(
+    'include/Zydis/BlockEncoder.h',
+    'include/Zydis/Assembler.h',
   )
 endif
 

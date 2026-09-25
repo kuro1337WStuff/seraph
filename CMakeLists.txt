@@ -260,7 +260,11 @@ if (ZYDIS_FEATURE_DECODER)
                 "${CMAKE_CURRENT_LIST_DIR}/include/Zydis/Encoder.h"
                 "${CMAKE_CURRENT_LIST_DIR}/include/Zydis/Internal/EncoderData.h"
                 "src/Encoder.c"
-                "src/EncoderData.c")
+                "src/EncoderData.c"
+                "${CMAKE_CURRENT_LIST_DIR}/include/Zydis/BlockEncoder.h"
+                "src/BlockEncoder.c"
+                "${CMAKE_CURRENT_LIST_DIR}/include/Zydis/Assembler.h"
+                "src/Assembler.c")
     endif ()
     if (ZYDIS_FEATURE_FORMATTER AND (NOT ZYDIS_MINIMAL_MODE))
         target_sources("Zydis"
@@ -593,5 +597,19 @@ if (ZYDIS_BUILD_TESTS)
         target_compile_definitions("SeraphOpcodeInfo" PRIVATE "_CRT_SECURE_NO_WARNINGS")
         zyan_set_common_flags("SeraphOpcodeInfo")
         add_test(NAME "SeraphOpcodeInfo" COMMAND "SeraphOpcodeInfo")
+    endif ()
+
+    if (ZYDIS_FEATURE_DECODER AND ZYDIS_FEATURE_ENCODER AND NOT ZYAN_NO_LIBC AND NOT ZYDIS_MINIMAL_MODE)
+        add_executable("SeraphBlockEncoder" "tests/block_encoder.c")
+        target_link_libraries("SeraphBlockEncoder" PUBLIC "Zydis")
+        target_compile_definitions("SeraphBlockEncoder" PRIVATE "_CRT_SECURE_NO_WARNINGS")
+        zyan_set_common_flags("SeraphBlockEncoder")
+        add_test(NAME "SeraphBlockEncoder" COMMAND "SeraphBlockEncoder")
+
+        add_executable("SeraphAssembler" "tests/assembler.c")
+        target_link_libraries("SeraphAssembler" PUBLIC "Zydis")
+        target_compile_definitions("SeraphAssembler" PRIVATE "_CRT_SECURE_NO_WARNINGS")
+        zyan_set_common_flags("SeraphAssembler")
+        add_test(NAME "SeraphAssembler" COMMAND "SeraphAssembler")
     endif ()
 endif ()

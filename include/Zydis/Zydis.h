@@ -44,6 +44,8 @@
 
 #if !defined(ZYDIS_DISABLE_ENCODER)
 #   include <Zydis/Encoder.h>
+#   include <Zydis/BlockEncoder.h>
+#   include <Zydis/Assembler.h>
 #endif
 
 #if !defined(ZYDIS_DISABLE_FORMATTER)

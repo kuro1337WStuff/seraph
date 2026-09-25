@@ -28,6 +28,20 @@ if tests_req and decoder.enabled() and minimal.disabled()
     dependencies: [zydis_dep],
   )
   test('SeraphOpcodeInfo', opcode_info)
+  if encoder.enabled()
+    block_encoder = executable(
+      'SeraphBlockEncoder',
+      'block_encoder.c',
+      dependencies: [zydis_dep],
+    )
+    test('SeraphBlockEncoder', block_encoder)
+    seraph_assembler = executable(
+      'SeraphAssembler',
+      'assembler.c',
+      dependencies: [zydis_dep],
+    )
+    test('SeraphAssembler', seraph_assembler)
+  endif
 endif
 
 if tests_req
