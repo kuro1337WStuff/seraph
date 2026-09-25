@@ -257,7 +257,9 @@ if (ZYDIS_FEATURE_DECODER)
             "${CMAKE_CURRENT_LIST_DIR}/include/Zydis/CpuidFlags.h"
             "src/CpuidFlags.c"
             "${CMAKE_CURRENT_LIST_DIR}/include/Zydis/ConditionCode.h"
-            "src/ConditionCode.c")
+            "src/ConditionCode.c"
+            "${CMAKE_CURRENT_LIST_DIR}/include/Zydis/VmExit.h"
+            "src/VmExit.c")
     if (ZYDIS_FEATURE_ENCODER)
         target_sources("Zydis"
             PRIVATE
@@ -284,7 +286,9 @@ if (ZYDIS_FEATURE_DECODER)
                 "src/FormatterBuffer.c"
                 "src/FormatterATT.c"
                 "src/FormatterBase.c"
-                "src/FormatterIntel.c")
+                "src/FormatterIntel.c"
+                "${CMAKE_CURRENT_LIST_DIR}/include/Zydis/Verbose.h"
+                "src/Verbose.c")
     endif ()
     if (ZYDIS_FEATURE_SEGMENT)
         target_sources("Zydis"
@@ -620,6 +624,12 @@ if (ZYDIS_BUILD_TESTS)
             target_compile_definitions("SeraphBench" PRIVATE "_CRT_SECURE_NO_WARNINGS")
             zyan_set_common_flags("SeraphBench")
             add_test(NAME "SeraphBench" COMMAND "SeraphBench" "200")
+
+            add_executable("SeraphVmExit" "tests/vm_exit.c")
+            target_link_libraries("SeraphVmExit" PUBLIC "Zydis")
+            target_compile_definitions("SeraphVmExit" PRIVATE "_CRT_SECURE_NO_WARNINGS")
+            zyan_set_common_flags("SeraphVmExit")
+            add_test(NAME "SeraphVmExit" COMMAND "SeraphVmExit")
         endif ()
     endif ()
 

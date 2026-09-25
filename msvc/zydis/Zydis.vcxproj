@@ -943,6 +943,8 @@
     <ClCompile Include="..\..\src\OpcodeInfo.c" />
     <ClCompile Include="..\..\src\CpuidFlags.c" />
     <ClCompile Include="..\..\src\ConditionCode.c" />
+    <ClCompile Include="..\..\src\VmExit.c" />
+    <ClCompile Include="..\..\src\Verbose.c" />
     <ClCompile Include="..\..\src\BlockEncoder.c" />
     <ClCompile Include="..\..\src\Assembler.c" />
   </ItemGroup>

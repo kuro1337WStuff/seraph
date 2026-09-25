@@ -47,6 +47,12 @@ if tests_req and decoder.enabled() and minimal.disabled()
       dependencies: [zydis_dep],
     )
     test('SeraphBench', seraph_bench, args: ['200'])
+    seraph_vm_exit = executable(
+      'SeraphVmExit',
+      'vm_exit.c',
+      dependencies: [zydis_dep],
+    )
+    test('SeraphVmExit', seraph_vm_exit)
   endif
   if encoder.enabled()
     block_encoder = executable(

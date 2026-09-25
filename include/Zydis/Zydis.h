@@ -42,6 +42,7 @@
 #   include <Zydis/OpcodeInfo.h>
 #   include <Zydis/CpuidFlags.h>
 #   include <Zydis/ConditionCode.h>
+#   include <Zydis/VmExit.h>
 #endif
 
 #if !defined(ZYDIS_DISABLE_ENCODER)
@@ -60,6 +61,7 @@
 
 #if !defined(ZYDIS_DISABLE_DECODER) && !defined(ZYDIS_DISABLE_FORMATTER)
 #   include <Zydis/Disassembler.h>
+#   include <Zydis/Verbose.h>
 #endif
 
 #include <Zydis/MetaInfo.h>

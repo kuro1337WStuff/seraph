@@ -184,12 +184,14 @@ if decoder.enabled()
     'src/OpcodeInfo.c',
     'src/CpuidFlags.c',
     'src/ConditionCode.c',
+    'src/VmExit.c',
   )
   hdrs_common += files(
     'include/Zydis/InstructionInfo.h',
     'include/Zydis/OpcodeInfo.h',
     'include/Zydis/CpuidFlags.h',
     'include/Zydis/ConditionCode.h',
+    'include/Zydis/VmExit.h',
   )
 endif
 
@@ -217,6 +219,7 @@ if formatter.enabled()
     'include/Zydis/Disassembler.h',
     'include/Zydis/Formatter.h',
     'include/Zydis/FormatterBuffer.h',
+    'include/Zydis/Verbose.h',
   )
   hdrs_internal += files(
     'include/Zydis/Internal/FormatterATT.h',
@@ -230,6 +233,7 @@ if formatter.enabled()
     'src/FormatterBase.c',
     'src/FormatterBuffer.c',
     'src/FormatterIntel.c',
+    'src/Verbose.c',
   )
 endif
 
