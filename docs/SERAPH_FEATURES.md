@@ -10,6 +10,7 @@ Zydis is the project. New instructions and fixes from zyantific land by merging 
 | assembler | done | `ZydisAsm` | `mov`, a scaled memory operand, `lock`, and a forward label assemble and decode back to the same mnemonic and operands. `ZydisAsmInsn` does the same for `cmp`, `lea`, and `nop`. `ZydisAsmBranch` does it for a near `jz` and `call`. |
 | block-encoder | done | `ZydisBlockEncode` | A short branch stays short. An out-of-range target widens. RIP-relative memory is relocated. `db` data can be the target of a label. Disabling widening fails cleanly. |
 | opcode-cpuid | done | `ZydisGetEncodingInfo`, `ZydisGetCpuidFlags` | Opcode, opcode map, and ModRM are copied from the decoded instruction. `isa_set` and `isa_ext` come from `instruction->meta`. `ZydisGetCpuidFlags` reports that ISA set as feature names. A 128-bit or 256-bit AVX-512 set also reports `AVX512VL`. Null arguments fail. No CPUID leaf numbers. |
+| condition-code | done | `ZydisGetConditionCode`, `ZydisConditionCodeEvaluate` | `jz`, `setz`, `cmovz`, and `setzuz` are E, taken when ZF is 1. `jnbe` is A. `cmovl` is L. The value matches the Jcc opcode nibble. `jrcxz`, `loop`, `fcmovb`, and `ccmpb` have no condition code. |
 | fast-formatter | optional | Straight-line formatter | Shipped only when an in-repo bench shows a decode-plus-format win. |
 
 `/seraph-feature` takes one of these ids as `args.feature`.

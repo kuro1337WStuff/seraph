@@ -41,6 +41,7 @@
 #   include <Zydis/InstructionInfo.h>
 #   include <Zydis/OpcodeInfo.h>
 #   include <Zydis/CpuidFlags.h>
+#   include <Zydis/ConditionCode.h>
 #endif
 
 #if !defined(ZYDIS_DISABLE_ENCODER)
