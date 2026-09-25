@@ -47,6 +47,14 @@ Workflows in `.grok/workflows/` rebuild, re-run `ctest`, and push `master` when 
 
 Open this folder as its own workspace: `grok --cwd` the `seraph` directory. In T3 Code, add the folder with Ctrl+K → Add Project.
 
+`ZydisFormatVerbose` prints the instruction, then the flow, the condition code, the intercept, and the VM-exit record:
+
+![ZydisFormatVerbose](./assets/screenshots/SeraphVerbose.png)
+
+`SeraphBench 1000` times decode and decode-plus-format. The `format` column is the formatter alone:
+
+![SeraphBench](./assets/screenshots/SeraphBench.png)
+
 ## Features
 
 - Supports all x86 and x86-64 (AMD64) instructions and [extensions](./include/Zydis/Generated/EnumISAExt.h)
@@ -75,15 +83,17 @@ https://github.com/zyantific/zydis/blob/214536a814ba20d2e33d2a907198d1a329aac45c
 
 The above example program generates the following output:
 
+![DisassembleSimple](./assets/screenshots/SeraphDisasm.png)
+
 ```asm
-007FFFFFFF400000   push rcx
-007FFFFFFF400001   lea eax, [rbp-0x01]
-007FFFFFFF400004   push rax
-007FFFFFFF400005   push qword ptr [rbp+0x0C]
-007FFFFFFF400008   push qword ptr [rbp+0x08]
-007FFFFFFF40000B   call [0x008000007588A5B1]
-007FFFFFFF400011   test eax, eax
-007FFFFFFF400013   js 0x007FFFFFFF42DB15
+007FFFFFFF400000  push rcx
+007FFFFFFF400001  lea eax, [rbp-0x01]
+007FFFFFFF400004  push rax
+007FFFFFFF400005  push [rbp+0x0C]
+007FFFFFFF400008  push [rbp+0x08]
+007FFFFFFF40000B  call [0x008000007588A5B1]
+007FFFFFFF400011  test eax, eax
+007FFFFFFF400013  js 0x007FFFFFFF42DB15
 ```
 
 ### Encoder
@@ -169,8 +179,9 @@ An example on how to use Zydis in your own CMake based project [can be found in 
 
 ## `ZydisInfo` tool
 
-The `ZydisInfo` command-line tool can be used to inspect essentially all information 
-that Zydis provides about an instruction.
+The `ZydisInfo` command-line tool can be used to inspect essentially all information
+that Zydis provides about an instruction. This run is `ZydisInfo -64` on
+`66 3E 65 2E F0 F2 F3 48 01 A4 98 2C 01 00 00`.
 
 ![ZydisInfo](./assets/screenshots/ZydisInfo.png)
 
