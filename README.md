@@ -47,11 +47,11 @@ Workflows in `.grok/workflows/` rebuild, re-run `ctest`, and push `master` when 
 
 Open this folder as its own workspace: `grok --cwd` the `seraph` directory. In T3 Code, add the folder with Ctrl+K → Add Project.
 
-`ZydisFormatVerbose` prints the instruction, then the flow, the condition code, the intercept, and the VM-exit record:
+Zydis colors the instruction the same way `ZydisInfo` does: a magenta mnemonic, a blue register, a green address, and a red immediate. The cyan text after the bar is what Seraph adds: flow, condition code, intercept, and the VM-exit record. `mov rax, rcx` has no VM exit. `cpuid` stays unprivileged in the normal report and still shows VMX reason 10 and SVM `0x72` here.
 
-![ZydisFormatVerbose](./assets/screenshots/SeraphVerbose.png)
+![What Seraph adds](./assets/screenshots/SeraphVerbose.png)
 
-`SeraphBench 1000` times decode and decode-plus-format. The `format` column is the formatter alone:
+Same 51-instruction buffer, one second. Yellow is before the decoder lookup inlining. Green is after. Instructions per second:
 
 ![SeraphBench](./assets/screenshots/SeraphBench.png)
 
