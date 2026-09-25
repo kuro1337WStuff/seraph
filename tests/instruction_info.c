@@ -47,13 +47,13 @@ static void Fail(const char* label, const char* what)
     ++g_failures;
 }
 
-static int Decode(const char* label, const ZyanU8* bytes, ZyanUSize length,
-    ZydisDecodedInstruction* instruction, ZydisDecodedOperand* operands,
-    ZydisInstructionInfo* info)
+static int DecodeMode(const char* label, ZydisMachineMode mode, ZydisStackWidth stack,
+    const ZyanU8* bytes, ZyanUSize length, ZydisDecodedInstruction* instruction,
+    ZydisDecodedOperand* operands, ZydisInstructionInfo* info)
 {
     ZydisDecoder decoder;
 
-    if (ZYAN_FAILED(ZydisDecoderInit(&decoder, ZYDIS_MACHINE_MODE_LONG_64, ZYDIS_STACK_WIDTH_64)) ||
+    if (ZYAN_FAILED(ZydisDecoderInit(&decoder, mode, stack)) ||
         ZYAN_FAILED(ZydisDecoderDecodeFull(&decoder, bytes, length, instruction, operands)) ||
         (instruction->length != length) ||
         ZYAN_FAILED(ZydisGetInstructionInfo(instruction, operands, instruction->operand_count, info)))
@@ -62,6 +62,14 @@ static int Decode(const char* label, const ZyanU8* bytes, ZyanUSize length,
         return 0;
     }
     return 1;
+}
+
+static int Decode(const char* label, const ZyanU8* bytes, ZyanUSize length,
+    ZydisDecodedInstruction* instruction, ZydisDecodedOperand* operands,
+    ZydisInstructionInfo* info)
+{
+    return DecodeMode(label, ZYDIS_MACHINE_MODE_LONG_64, ZYDIS_STACK_WIDTH_64, bytes, length,
+        instruction, operands, info);
 }
 
 static int FindReg(const ZydisInstructionInfo* info, ZydisRegister reg, ZydisOperandActions* action)
@@ -77,6 +85,18 @@ static int FindReg(const ZydisInstructionInfo* info, ZydisRegister reg, ZydisOpe
         }
     }
     return 0;
+}
+
+static void ExpectAbsent(const char* label, const ZydisInstructionInfo* info, ZydisRegister reg)
+{
+    ZydisOperandActions got = 0;
+
+    if (FindReg(info, reg, &got))
+    {
+        printf("FAIL %s: unexpected %s action 0x%x\n", label, ZydisRegisterGetString(reg),
+            (unsigned)got);
+        ++g_failures;
+    }
 }
 
 static void ExpectReg(const char* label, const ZydisInstructionInfo* info, ZydisRegister reg,
@@ -326,6 +346,93 @@ int main(void)
         if (Decode("hlt", bytes, sizeof(bytes), &instruction, operands, &info))
         {
             ExpectFlow("hlt", &info, ZYDIS_INSTRUCTION_FLOW_PRIVILEGED);
+        }
+    }
+
+    {
+        static const ZyanU8 bytes[] = { 0x88, 0xC8 };
+        if (Decode("mov al, cl", bytes, sizeof(bytes), &instruction, operands, &info))
+        {
+            ExpectReg("mov al, cl", &info, ZYDIS_REGISTER_AL, ZYDIS_OPERAND_ACTION_WRITE);
+            ExpectReg("mov al, cl", &info, ZYDIS_REGISTER_AX, ZYDIS_OPERAND_ACTION_READWRITE);
+            ExpectReg("mov al, cl", &info, ZYDIS_REGISTER_EAX, ZYDIS_OPERAND_ACTION_READWRITE);
+            ExpectReg("mov al, cl", &info, ZYDIS_REGISTER_RAX, ZYDIS_OPERAND_ACTION_READWRITE);
+            ExpectAbsent("mov al, cl", &info, ZYDIS_REGISTER_AH);
+            ExpectReg("mov al, cl", &info, ZYDIS_REGISTER_CL, ZYDIS_OPERAND_ACTION_READ);
+            ExpectReg("mov al, cl", &info, ZYDIS_REGISTER_CX, ZYDIS_OPERAND_ACTION_READ);
+            ExpectReg("mov al, cl", &info, ZYDIS_REGISTER_ECX, ZYDIS_OPERAND_ACTION_READ);
+            ExpectReg("mov al, cl", &info, ZYDIS_REGISTER_RCX, ZYDIS_OPERAND_ACTION_READ);
+            ExpectAbsent("mov al, cl", &info, ZYDIS_REGISTER_CH);
+        }
+    }
+
+    {
+        static const ZyanU8 bytes[] = { 0x88, 0xE8 };
+        if (Decode("mov al, ch", bytes, sizeof(bytes), &instruction, operands, &info))
+        {
+            ExpectReg("mov al, ch", &info, ZYDIS_REGISTER_CH, ZYDIS_OPERAND_ACTION_READ);
+            ExpectReg("mov al, ch", &info, ZYDIS_REGISTER_CX, ZYDIS_OPERAND_ACTION_READ);
+            ExpectReg("mov al, ch", &info, ZYDIS_REGISTER_RCX, ZYDIS_OPERAND_ACTION_READ);
+            ExpectAbsent("mov al, ch", &info, ZYDIS_REGISTER_CL);
+        }
+    }
+
+    {
+        static const ZyanU8 bytes[] = { 0x31, 0xC0 };
+        if (Decode("xor eax, eax", bytes, sizeof(bytes), &instruction, operands, &info))
+        {
+            ExpectReg("xor eax, eax", &info, ZYDIS_REGISTER_EAX, ZYDIS_OPERAND_ACTION_READWRITE);
+            ExpectReg("xor eax, eax", &info, ZYDIS_REGISTER_RAX, ZYDIS_OPERAND_ACTION_WRITE);
+        }
+    }
+
+    {
+        static const ZyanU8 bytes[] = { 0x01, 0xC8 };
+        if (Decode("add eax, ecx", bytes, sizeof(bytes), &instruction, operands, &info))
+        {
+            ExpectReg("add eax, ecx", &info, ZYDIS_REGISTER_EAX, ZYDIS_OPERAND_ACTION_READWRITE);
+            ExpectReg("add eax, ecx", &info, ZYDIS_REGISTER_RAX, ZYDIS_OPERAND_ACTION_WRITE);
+            ExpectReg("add eax, ecx", &info, ZYDIS_REGISTER_AX, ZYDIS_OPERAND_ACTION_READWRITE);
+            ExpectReg("add eax, ecx", &info, ZYDIS_REGISTER_AH, ZYDIS_OPERAND_ACTION_READWRITE);
+            ExpectReg("add eax, ecx", &info, ZYDIS_REGISTER_ECX, ZYDIS_OPERAND_ACTION_READ);
+            ExpectReg("add eax, ecx", &info, ZYDIS_REGISTER_RCX, ZYDIS_OPERAND_ACTION_READ);
+            ExpectReg("add eax, ecx", &info, ZYDIS_REGISTER_CH, ZYDIS_OPERAND_ACTION_READ);
+        }
+    }
+
+    {
+        static const ZyanU8 bytes[] = { 0x48, 0x89, 0xC8 };
+        if (Decode("mov rax, rcx", bytes, sizeof(bytes), &instruction, operands, &info))
+        {
+            ExpectReg("mov rax, rcx", &info, ZYDIS_REGISTER_RAX, ZYDIS_OPERAND_ACTION_WRITE);
+            ExpectReg("mov rax, rcx", &info, ZYDIS_REGISTER_EAX, ZYDIS_OPERAND_ACTION_WRITE);
+            ExpectReg("mov rax, rcx", &info, ZYDIS_REGISTER_AH, ZYDIS_OPERAND_ACTION_WRITE);
+            ExpectReg("mov rax, rcx", &info, ZYDIS_REGISTER_RCX, ZYDIS_OPERAND_ACTION_READ);
+            ExpectReg("mov rax, rcx", &info, ZYDIS_REGISTER_CL, ZYDIS_OPERAND_ACTION_READ);
+        }
+    }
+
+    {
+        static const ZyanU8 bytes[] = { 0x66, 0x01, 0xC8 };
+        if (DecodeMode("add ax, cx", ZYDIS_MACHINE_MODE_LEGACY_32, ZYDIS_STACK_WIDTH_32, bytes,
+                sizeof(bytes), &instruction, operands, &info))
+        {
+            ExpectReg("add ax, cx", &info, ZYDIS_REGISTER_AX, ZYDIS_OPERAND_ACTION_READWRITE);
+            ExpectReg("add ax, cx", &info, ZYDIS_REGISTER_EAX, ZYDIS_OPERAND_ACTION_READWRITE);
+            ExpectReg("add ax, cx", &info, ZYDIS_REGISTER_AL, ZYDIS_OPERAND_ACTION_READWRITE);
+            ExpectAbsent("add ax, cx", &info, ZYDIS_REGISTER_RAX);
+        }
+    }
+
+    {
+        static const ZyanU8 bytes[] = { 0x00, 0xC8 };
+        if (DecodeMode("add al, cl 16", ZYDIS_MACHINE_MODE_REAL_16, ZYDIS_STACK_WIDTH_16, bytes,
+                sizeof(bytes), &instruction, operands, &info))
+        {
+            ExpectReg("add al, cl 16", &info, ZYDIS_REGISTER_AL, ZYDIS_OPERAND_ACTION_READWRITE);
+            ExpectReg("add al, cl 16", &info, ZYDIS_REGISTER_AX, ZYDIS_OPERAND_ACTION_READWRITE);
+            ExpectAbsent("add al, cl 16", &info, ZYDIS_REGISTER_EAX);
+            ExpectAbsent("add al, cl 16", &info, ZYDIS_REGISTER_RAX);
         }
     }
 

@@ -51,7 +51,7 @@ extern "C" {
 /**
  * Maximum number of register accesses reported for one instruction.
  */
-#define ZYDIS_INSTRUCTION_INFO_MAX_REGISTERS 48
+#define ZYDIS_INSTRUCTION_INFO_MAX_REGISTERS 96
 
 /* ============================================================================================== */
 /* Enums and types                                                                                */
@@ -85,6 +85,11 @@ typedef enum ZydisInstructionFlow_
 
 /**
  * One register touched by the instruction.
+ *
+ * GPR accesses are also reported on the other widths of that register. A write to `al` is a
+ * partial update of `ax`, `eax`, and `rax`, so those are read and written. A 32-bit write in
+ * 64-bit mode zero-extends, so `eax` written means `rax` is written and its upper half is not
+ * read. `ah` does not overlap `al`. Segment, IP, and x87 registers stay exact.
  */
 typedef struct ZydisInstructionRegisterUse_
 {
