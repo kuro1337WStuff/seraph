@@ -53,6 +53,26 @@ typedef struct ZydisAsm_
     ZyanU32 pending_label;
 } ZydisAsm;
 
+/**
+ * One operand for `ZydisAsmInsn`.
+ *
+ * A memory operand with `size` 0 takes its size in bytes from the widest
+ * register operand in the same instruction. `lea rax, [rbx]` can leave `size`
+ * at 0. An immediate stored to memory, such as `mov dword [rax], 1`, has no
+ * register operand, so `size` must be set.
+ */
+typedef struct ZydisAsmOp_
+{
+    ZydisOperandType kind;
+    ZydisRegister reg;
+    ZydisRegister base;
+    ZydisRegister index;
+    ZyanU8 scale;
+    ZyanI64 disp;
+    ZyanU16 size;
+    ZyanU64 imm;
+} ZydisAsmOp;
+
 /* ============================================================================================== */
 /* Exported functions                                                                             */
 /* ============================================================================================== */
@@ -72,6 +92,19 @@ ZYDIS_EXPORT ZyanStatus ZydisAsmDb(ZydisAsm* assembler, const ZyanU8* bytes, Zya
 ZYDIS_EXPORT ZyanStatus ZydisAsmLabel(ZydisAsm* assembler, ZyanU32 label_id);
 ZYDIS_EXPORT ZyanStatus ZydisAsmJmpLabel(ZydisAsm* assembler, ZyanU32 label_id);
 ZYDIS_EXPORT ZyanStatus ZydisAsmLock(ZydisAsm* assembler);
+/**
+ * Appends any mnemonic the encoder accepts.
+ *
+ * `op_count` may be 0. `ops` may be null in that case. At most
+ * `ZYDIS_ENCODER_MAX_OPERANDS` operands are accepted.
+ */
+ZYDIS_EXPORT ZyanStatus ZydisAsmInsn(ZydisAsm* assembler, ZydisMnemonic mnemonic,
+    const ZydisAsmOp* ops, ZyanU8 op_count);
+/**
+ * Appends a near `jmp`, `jcc`, `call`, or `loop` whose target is `label_id`.
+ */
+ZYDIS_EXPORT ZyanStatus ZydisAsmBranch(ZydisAsm* assembler, ZydisMnemonic mnemonic,
+    ZyanU32 label_id);
 ZYDIS_EXPORT ZyanStatus ZydisAsmEncode(ZydisAsm* assembler, ZyanU64 base_ip, ZyanU8* out,
     ZyanUSize out_cap, ZyanUSize* written);
 

@@ -280,6 +280,90 @@ ZyanStatus ZydisAsmLock(ZydisAsm* assembler)
     return ZYAN_STATUS_SUCCESS;
 }
 
+ZyanStatus ZydisAsmInsn(ZydisAsm* assembler, ZydisMnemonic mnemonic,
+    const ZydisAsmOp* ops, ZyanU8 op_count)
+{
+    ZydisEncoderRequest request;
+    ZyanStatus status;
+    ZyanU8 i;
+    ZyanU16 inferred = 0;
+
+    if (op_count && !ops)
+    {
+        return ZYAN_STATUS_INVALID_ARGUMENT;
+    }
+    if (op_count > ZYDIS_ENCODER_MAX_OPERANDS)
+    {
+        return ZYAN_STATUS_INVALID_ARGUMENT;
+    }
+    status = ZydisAsmBegin(assembler, &request);
+    if (ZYAN_FAILED(status))
+    {
+        return status;
+    }
+    for (i = 0; i < op_count; ++i)
+    {
+        ZyanU16 width;
+
+        if (ops[i].kind != ZYDIS_OPERAND_TYPE_REGISTER)
+        {
+            continue;
+        }
+        width = ZydisAsmRegBytes(assembler->machine_mode, ops[i].reg);
+        if (width > inferred)
+        {
+            inferred = width;
+        }
+    }
+    request.mnemonic = mnemonic;
+    request.operand_count = op_count;
+    for (i = 0; i < op_count; ++i)
+    {
+        switch (ops[i].kind)
+        {
+        case ZYDIS_OPERAND_TYPE_REGISTER:
+            request.operands[i].type = ZYDIS_OPERAND_TYPE_REGISTER;
+            request.operands[i].reg.value = ops[i].reg;
+            break;
+        case ZYDIS_OPERAND_TYPE_IMMEDIATE:
+            request.operands[i].type = ZYDIS_OPERAND_TYPE_IMMEDIATE;
+            request.operands[i].imm.u = ops[i].imm;
+            break;
+        case ZYDIS_OPERAND_TYPE_MEMORY:
+            request.operands[i].type = ZYDIS_OPERAND_TYPE_MEMORY;
+            request.operands[i].mem.base = ops[i].base;
+            request.operands[i].mem.index = ops[i].index;
+            request.operands[i].mem.scale = (ops[i].index == ZYDIS_REGISTER_NONE) ? 0 :
+                (ops[i].scale ? ops[i].scale : 1);
+            request.operands[i].mem.displacement = ops[i].disp;
+            request.operands[i].mem.size = ops[i].size ? ops[i].size : inferred;
+            if (!request.operands[i].mem.size)
+            {
+                return ZYAN_STATUS_INVALID_ARGUMENT;
+            }
+            break;
+        default:
+            return ZYAN_STATUS_INVALID_ARGUMENT;
+        }
+    }
+    return ZydisAsmCommit(assembler, &request, 0, 0);
+}
+
+ZyanStatus ZydisAsmBranch(ZydisAsm* assembler, ZydisMnemonic mnemonic, ZyanU32 label_id)
+{
+    ZydisEncoderRequest request;
+    ZyanStatus status = ZydisAsmBegin(assembler, &request);
+
+    if (ZYAN_FAILED(status) || !label_id)
+    {
+        return label_id ? status : ZYAN_STATUS_INVALID_ARGUMENT;
+    }
+    request.mnemonic = mnemonic;
+    request.operand_count = 1;
+    request.operands[0].type = ZYDIS_OPERAND_TYPE_IMMEDIATE;
+    return ZydisAsmCommit(assembler, &request, label_id, 0);
+}
+
 ZyanStatus ZydisAsmEncode(ZydisAsm* assembler, ZyanU64 base_ip, ZyanU8* out, ZyanUSize out_cap,
     ZyanUSize* written)
 {

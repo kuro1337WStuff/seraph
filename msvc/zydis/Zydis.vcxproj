@@ -941,6 +941,7 @@
     <ClCompile Include="..\..\src\Formatter.c" />
     <ClCompile Include="..\..\src\InstructionInfo.c" />
     <ClCompile Include="..\..\src\OpcodeInfo.c" />
+    <ClCompile Include="..\..\src\CpuidFlags.c" />
     <ClCompile Include="..\..\src\BlockEncoder.c" />
     <ClCompile Include="..\..\src\Assembler.c" />
   </ItemGroup>

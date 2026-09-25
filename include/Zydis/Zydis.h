@@ -40,6 +40,7 @@
 #   include <Zydis/DecoderTypes.h>
 #   include <Zydis/InstructionInfo.h>
 #   include <Zydis/OpcodeInfo.h>
+#   include <Zydis/CpuidFlags.h>
 #endif
 
 #if !defined(ZYDIS_DISABLE_ENCODER)

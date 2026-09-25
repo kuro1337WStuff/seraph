@@ -28,6 +28,12 @@ if tests_req and decoder.enabled() and minimal.disabled()
     dependencies: [zydis_dep],
   )
   test('SeraphOpcodeInfo', opcode_info)
+  cpuid_flags = executable(
+    'SeraphCpuidFlags',
+    'cpuid_flags.c',
+    dependencies: [zydis_dep],
+  )
+  test('SeraphCpuidFlags', cpuid_flags)
   if encoder.enabled()
     block_encoder = executable(
       'SeraphBlockEncoder',

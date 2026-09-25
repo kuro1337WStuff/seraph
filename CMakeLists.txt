@@ -253,7 +253,9 @@ if (ZYDIS_FEATURE_DECODER)
             "${CMAKE_CURRENT_LIST_DIR}/include/Zydis/InstructionInfo.h"
             "src/InstructionInfo.c"
             "${CMAKE_CURRENT_LIST_DIR}/include/Zydis/OpcodeInfo.h"
-            "src/OpcodeInfo.c")
+            "src/OpcodeInfo.c"
+            "${CMAKE_CURRENT_LIST_DIR}/include/Zydis/CpuidFlags.h"
+            "src/CpuidFlags.c")
     if (ZYDIS_FEATURE_ENCODER)
         target_sources("Zydis"
             PRIVATE
@@ -597,6 +599,12 @@ if (ZYDIS_BUILD_TESTS)
         target_compile_definitions("SeraphOpcodeInfo" PRIVATE "_CRT_SECURE_NO_WARNINGS")
         zyan_set_common_flags("SeraphOpcodeInfo")
         add_test(NAME "SeraphOpcodeInfo" COMMAND "SeraphOpcodeInfo")
+
+        add_executable("SeraphCpuidFlags" "tests/cpuid_flags.c")
+        target_link_libraries("SeraphCpuidFlags" PUBLIC "Zydis")
+        target_compile_definitions("SeraphCpuidFlags" PRIVATE "_CRT_SECURE_NO_WARNINGS")
+        zyan_set_common_flags("SeraphCpuidFlags")
+        add_test(NAME "SeraphCpuidFlags" COMMAND "SeraphCpuidFlags")
     endif ()
 
     if (ZYDIS_FEATURE_DECODER AND ZYDIS_FEATURE_ENCODER AND NOT ZYAN_NO_LIBC AND NOT ZYDIS_MINIMAL_MODE)

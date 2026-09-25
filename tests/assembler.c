@@ -25,6 +25,7 @@
 ***************************************************************************************************/
 
 #include <stdio.h>
+#include <string.h>
 
 #include <Zydis/Zydis.h>
 
@@ -102,6 +103,91 @@ int main(void)
     {
         printf("FAIL count %d\n", index);
         ++g_failures;
+    }
+    ZydisAsmInit(&assembler, ZYDIS_MACHINE_MODE_LONG_64);
+    {
+        ZydisAsmOp cmp_ops[2];
+        ZydisAsmOp lea_ops[2];
+        ZyanU64 target = 0;
+
+        memset(cmp_ops, 0, sizeof(cmp_ops));
+        cmp_ops[0].kind = ZYDIS_OPERAND_TYPE_REGISTER;
+        cmp_ops[0].reg = ZYDIS_REGISTER_RAX;
+        cmp_ops[1].kind = ZYDIS_OPERAND_TYPE_REGISTER;
+        cmp_ops[1].reg = ZYDIS_REGISTER_RCX;
+        memset(lea_ops, 0, sizeof(lea_ops));
+        lea_ops[0].kind = ZYDIS_OPERAND_TYPE_REGISTER;
+        lea_ops[0].reg = ZYDIS_REGISTER_RAX;
+        lea_ops[1].kind = ZYDIS_OPERAND_TYPE_MEMORY;
+        lea_ops[1].base = ZYDIS_REGISTER_RBX;
+        lea_ops[1].index = ZYDIS_REGISTER_RCX;
+        lea_ops[1].scale = 4;
+        lea_ops[1].disp = 8;
+        if (ZYAN_FAILED(ZydisAsmInsn(&assembler, ZYDIS_MNEMONIC_CMP, cmp_ops, 2)) ||
+            ZYAN_FAILED(ZydisAsmInsn(&assembler, ZYDIS_MNEMONIC_LEA, lea_ops, 2)) ||
+            ZYAN_FAILED(ZydisAsmBranch(&assembler, ZYDIS_MNEMONIC_JZ, 7)) ||
+            ZYAN_FAILED(ZydisAsmInsn(&assembler, ZYDIS_MNEMONIC_NOP, ZYAN_NULL, 0)) ||
+            ZYAN_FAILED(ZydisAsmLabel(&assembler, 7)) ||
+            ZYAN_FAILED(ZydisAsmBranch(&assembler, ZYDIS_MNEMONIC_CALL, 8)) ||
+            ZYAN_FAILED(ZydisAsmLabel(&assembler, 8)) ||
+            ZYAN_FAILED(ZydisAsmRet(&assembler)) ||
+            ZYAN_FAILED(ZydisAsmEncode(&assembler, 0x2000, out, sizeof(out), &written)))
+        {
+            printf("FAIL general encode\n");
+            return 1;
+        }
+        offset = 0;
+        index = 0;
+        while (offset < written)
+        {
+            ZyanU64 ip = 0x2000 + offset;
+
+            if (ZYAN_FAILED(ZydisDecoderDecodeFull(&decoder, out + offset, written - offset,
+                    &instruction, operands)))
+            {
+                printf("FAIL general decode\n");
+                return 1;
+            }
+            if (index == 0 && instruction.mnemonic != ZYDIS_MNEMONIC_CMP)
+            {
+                printf("FAIL cmp\n");
+                ++g_failures;
+            }
+            if (index == 1)
+            {
+                if ((instruction.mnemonic != ZYDIS_MNEMONIC_LEA) ||
+                    (operands[1].mem.base != ZYDIS_REGISTER_RBX) ||
+                    (operands[1].mem.index != ZYDIS_REGISTER_RCX) ||
+                    (operands[1].mem.scale != 4) ||
+                    (operands[1].mem.disp.value != 8))
+                {
+                    printf("FAIL lea\n");
+                    ++g_failures;
+                }
+            }
+            if (index == 2)
+            {
+                if ((instruction.mnemonic != ZYDIS_MNEMONIC_JZ) ||
+                    ZYAN_FAILED(ZydisCalcAbsoluteAddress(&instruction, &operands[0], ip, &target)) ||
+                    (target != 0x2000 + offset + instruction.length + 1))
+                {
+                    printf("FAIL jz target 0x%llx\n", (unsigned long long)target);
+                    ++g_failures;
+                }
+            }
+            if ((index == 4) && (instruction.mnemonic != ZYDIS_MNEMONIC_CALL))
+            {
+                printf("FAIL call\n");
+                ++g_failures;
+            }
+            offset += instruction.length;
+            ++index;
+        }
+        if (index != 6)
+        {
+            printf("FAIL general count %d\n", index);
+            ++g_failures;
+        }
     }
     if (g_failures)
     {
