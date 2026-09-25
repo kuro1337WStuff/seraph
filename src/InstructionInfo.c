@@ -175,8 +175,239 @@ static ZyanU64 ZydisInfoGprMask(ZyanU8 width, ZyanBool high_byte)
     return 0xFFFFFFFFFFFFFFFFULL;
 }
 
+static ZyanBool ZydisInfoVec(ZydisRegister reg, ZyanU8* index, ZyanU16* bits)
+{
+    if ((reg >= ZYDIS_REGISTER_XMM0) && (reg <= ZYDIS_REGISTER_XMM31))
+    {
+        *index = (ZyanU8)(reg - ZYDIS_REGISTER_XMM0);
+        *bits = 128;
+        return ZYAN_TRUE;
+    }
+    if ((reg >= ZYDIS_REGISTER_YMM0) && (reg <= ZYDIS_REGISTER_YMM31))
+    {
+        *index = (ZyanU8)(reg - ZYDIS_REGISTER_YMM0);
+        *bits = 256;
+        return ZYAN_TRUE;
+    }
+    if ((reg >= ZYDIS_REGISTER_ZMM0) && (reg <= ZYDIS_REGISTER_ZMM31))
+    {
+        *index = (ZyanU8)(reg - ZYDIS_REGISTER_ZMM0);
+        *bits = 512;
+        return ZYAN_TRUE;
+    }
+    return ZYAN_FALSE;
+}
+
+static ZydisRegister ZydisInfoVecReg(ZyanU8 index, ZyanU16 bits)
+{
+    if (bits == 128)
+    {
+        return (ZydisRegister)(ZYDIS_REGISTER_XMM0 + index);
+    }
+    if (bits == 256)
+    {
+        return (ZydisRegister)(ZYDIS_REGISTER_YMM0 + index);
+    }
+    return (ZydisRegister)(ZYDIS_REGISTER_ZMM0 + index);
+}
+
+static ZyanStatus ZydisInfoAddVector(ZydisInstructionInfo* info, ZydisRegister reg,
+    ZydisOperandActions action, ZyanU16 op_size)
+{
+    ZyanU8 index;
+    ZyanU16 bits;
+    ZyanU8 i;
+    static const ZyanU16 WIDTHS[3] = { 128, 256, 512 };
+    ZydisOperandActions write_bits = (ZydisOperandActions)(action &
+        (ZYDIS_OPERAND_ACTION_WRITE | ZYDIS_OPERAND_ACTION_CONDWRITE));
+    ZydisOperandActions read_bits = (ZydisOperandActions)(action &
+        (ZYDIS_OPERAND_ACTION_READ | ZYDIS_OPERAND_ACTION_CONDREAD));
+    ZyanStatus status;
+
+    if (!ZydisInfoVec(reg, &index, &bits))
+    {
+        return ZYAN_STATUS_SUCCESS;
+    }
+
+    if (write_bits && (op_size != 0) && (op_size < bits) &&
+        !(action & (ZYDIS_OPERAND_ACTION_READ | ZYDIS_OPERAND_ACTION_CONDREAD)))
+    {
+        /* movss/movsd keep the untouched lanes of this register. */
+        status = ZydisInfoAddRegister(info, reg, ZYDIS_OPERAND_ACTION_READ);
+        if (ZYAN_FAILED(status))
+        {
+            return status;
+        }
+    }
+
+    for (i = 0; i < 3; ++i)
+    {
+        ZyanU16 view_bits = WIDTHS[i];
+        ZydisOperandActions derived;
+
+        if (view_bits == bits)
+        {
+            continue;
+        }
+        if (view_bits < bits)
+        {
+            derived = (ZydisOperandActions)(read_bits | write_bits);
+        }
+        else if (write_bits && (op_size != 0) && (op_size < bits))
+        {
+            /* Scalar merge (movss/movsd): the untouched lanes are read, and
+             * the bits above this vector register are still zeroed. */
+            derived = (ZydisOperandActions)(ZYDIS_OPERAND_ACTION_READ | write_bits);
+            if (derived & ZYDIS_OPERAND_ACTION_WRITE)
+            {
+                derived = (ZydisOperandActions)(derived & ~ZYDIS_OPERAND_ACTION_CONDWRITE);
+            }
+        }
+        else if (write_bits)
+        {
+            derived = write_bits;
+        }
+        else
+        {
+            derived = read_bits;
+        }
+
+        status = ZydisInfoAddRegister(info, ZydisInfoVecReg(index, view_bits), derived);
+        if (ZYAN_FAILED(status))
+        {
+            return status;
+        }
+    }
+    return ZYAN_STATUS_SUCCESS;
+}
+
+static ZyanStatus ZydisInfoAddMmxX87(ZydisInstructionInfo* info, ZydisRegister reg,
+    ZydisOperandActions action)
+{
+    ZydisOperandActions write_bits = (ZydisOperandActions)(action &
+        (ZYDIS_OPERAND_ACTION_WRITE | ZYDIS_OPERAND_ACTION_CONDWRITE));
+    ZydisOperandActions read_bits = (ZydisOperandActions)(action &
+        (ZYDIS_OPERAND_ACTION_READ | ZYDIS_OPERAND_ACTION_CONDREAD));
+    ZydisRegister other;
+    ZydisOperandActions derived;
+
+    if ((reg >= ZYDIS_REGISTER_MM0) && (reg <= ZYDIS_REGISTER_MM7))
+    {
+        other = (ZydisRegister)(ZYDIS_REGISTER_ST0 + (reg - ZYDIS_REGISTER_MM0));
+        /* An MMX write forces the x87 exponent and tag, so the ST slot is defined. */
+        derived = write_bits ? (ZydisOperandActions)(write_bits | (read_bits &
+            ZYDIS_OPERAND_ACTION_READ)) : read_bits;
+    }
+    else if ((reg >= ZYDIS_REGISTER_ST0) && (reg <= ZYDIS_REGISTER_ST7))
+    {
+        other = (ZydisRegister)(ZYDIS_REGISTER_MM0 + (reg - ZYDIS_REGISTER_ST0));
+        derived = (ZydisOperandActions)(read_bits | write_bits);
+    }
+    else
+    {
+        return ZYAN_STATUS_SUCCESS;
+    }
+
+    if (derived & ZYDIS_OPERAND_ACTION_READ)
+    {
+        derived = (ZydisOperandActions)(derived & ~ZYDIS_OPERAND_ACTION_CONDREAD);
+    }
+    if (derived & ZYDIS_OPERAND_ACTION_WRITE)
+    {
+        derived = (ZydisOperandActions)(derived & ~ZYDIS_OPERAND_ACTION_CONDWRITE);
+    }
+    return ZydisInfoAddRegister(info, other, derived);
+}
+
+static ZyanStatus ZydisInfoAddLadder(ZydisInstructionInfo* info, ZydisMachineMode mode,
+    ZydisRegister reg, ZydisOperandActions action, ZydisRegister base)
+{
+    ZyanU8 mode_bits = ZydisInfoModeBits(mode);
+    ZyanU8 src = (ZyanU8)(reg - base);
+    ZyanU8 src_bits = (ZyanU8)(16U << src);
+    ZyanU8 i;
+    ZydisOperandActions write_bits = (ZydisOperandActions)(action &
+        (ZYDIS_OPERAND_ACTION_WRITE | ZYDIS_OPERAND_ACTION_CONDWRITE));
+    ZydisOperandActions read_bits = (ZydisOperandActions)(action &
+        (ZYDIS_OPERAND_ACTION_READ | ZYDIS_OPERAND_ACTION_CONDREAD));
+
+    if (src > 2)
+    {
+        return ZYAN_STATUS_SUCCESS;
+    }
+
+    for (i = 0; i < 3; ++i)
+    {
+        ZyanU8 bits = (ZyanU8)(16U << i);
+        ZydisOperandActions derived;
+        ZyanStatus status;
+
+        if (i == src)
+        {
+            continue;
+        }
+        if ((bits > mode_bits) && (bits > src_bits))
+        {
+            continue;
+        }
+        if (bits < src_bits)
+        {
+            derived = (ZydisOperandActions)(read_bits | write_bits);
+        }
+        else if (write_bits && (src_bits == 32) && (bits == 64) &&
+            (mode == ZYDIS_MACHINE_MODE_LONG_64))
+        {
+            derived = write_bits;
+        }
+        else if (write_bits)
+        {
+            derived = (ZydisOperandActions)(ZYDIS_OPERAND_ACTION_READ | write_bits);
+            if (derived & ZYDIS_OPERAND_ACTION_WRITE)
+            {
+                derived = (ZydisOperandActions)(derived & ~ZYDIS_OPERAND_ACTION_CONDWRITE);
+            }
+        }
+        else
+        {
+            derived = read_bits;
+        }
+        status = ZydisInfoAddRegister(info, (ZydisRegister)(base + i), derived);
+        if (ZYAN_FAILED(status))
+        {
+            return status;
+        }
+    }
+    return ZYAN_STATUS_SUCCESS;
+}
+
+static ZyanStatus ZydisInfoAddOther(ZydisInstructionInfo* info, ZydisMachineMode mode,
+    ZydisRegister reg, ZydisOperandActions action, ZyanU16 op_size)
+{
+    ZyanStatus status;
+
+    status = ZydisInfoAddVector(info, reg, action, op_size);
+    if (ZYAN_FAILED(status))
+    {
+        return status;
+    }
+    status = ZydisInfoAddMmxX87(info, reg, action);
+    if (ZYAN_FAILED(status))
+    {
+        return status;
+    }
+    if ((reg >= ZYDIS_REGISTER_FLAGS) && (reg <= ZYDIS_REGISTER_RFLAGS))
+    {
+        return ZydisInfoAddLadder(info, mode, reg, action, ZYDIS_REGISTER_FLAGS);
+    }
+    if ((reg >= ZYDIS_REGISTER_IP) && (reg <= ZYDIS_REGISTER_RIP))
+    {
+        return ZydisInfoAddLadder(info, mode, reg, action, ZYDIS_REGISTER_IP);
+    }
+    return ZYAN_STATUS_SUCCESS;
+}
+
 static ZyanStatus ZydisInfoAddGpr(ZydisInstructionInfo* info, ZydisMachineMode mode,
-    ZydisMnemonic mnemonic, ZydisRegister reg, ZydisOperandActions action)
+    ZydisMnemonic mnemonic, ZydisRegister reg, ZydisOperandActions action, ZyanU16 op_size)
 {
     ZyanU8 family;
     ZyanU8 width;
@@ -187,9 +418,13 @@ static ZyanStatus ZydisInfoAddGpr(ZydisInstructionInfo* info, ZydisMachineMode m
     static const ZyanU8 WIDTHS[4] = { 8, 16, 32, 64 };
 
     status = ZydisInfoAddRegister(info, reg, action);
-    if (ZYAN_FAILED(status) || !action || !ZydisInfoGprFamily(reg, &family, &width, &high_byte))
+    if (ZYAN_FAILED(status) || !action)
     {
         return status;
+    }
+    if (!ZydisInfoGprFamily(reg, &family, &width, &high_byte))
+    {
+        return ZydisInfoAddOther(info, mode, reg, action, op_size);
     }
 
     mode_bits = ZydisInfoModeBits(mode);
@@ -522,7 +757,7 @@ ZyanStatus ZydisGetInstructionInfo(const ZydisDecodedInstruction* instruction,
         if (operand->type == ZYDIS_OPERAND_TYPE_REGISTER)
         {
             status = ZydisInfoAddGpr(info, instruction->machine_mode, instruction->mnemonic,
-                operand->reg.value, operand->actions);
+                operand->reg.value, operand->actions, operand->size);
             if (ZYAN_FAILED(status))
             {
                 return status;
@@ -549,13 +784,13 @@ ZyanStatus ZydisGetInstructionInfo(const ZydisDecodedInstruction* instruction,
             ++info->memory_count;
 
             status = ZydisInfoAddGpr(info, instruction->machine_mode, instruction->mnemonic,
-                operand->mem.base, ZYDIS_OPERAND_ACTION_READ);
+                operand->mem.base, ZYDIS_OPERAND_ACTION_READ, 0);
             if (ZYAN_FAILED(status))
             {
                 return status;
             }
             status = ZydisInfoAddGpr(info, instruction->machine_mode, instruction->mnemonic,
-                operand->mem.index, ZYDIS_OPERAND_ACTION_READ);
+                operand->mem.index, ZYDIS_OPERAND_ACTION_READ, 0);
             if (ZYAN_FAILED(status))
             {
                 return status;
@@ -644,6 +879,60 @@ ZyanStatus ZydisGetInstructionInfo(const ZydisDecodedInstruction* instruction,
                         ZYDIS_OPERAND_ACTION_CONDREAD);
                 }
             }
+        }
+    }
+
+    /*
+     * A full-width XMM/YMM write zeroes the bits above that width. A second
+     * read of the same narrow register must not turn ymm/zmm into a read.
+     * A scalar merge (movss) is smaller than the XMM register and keeps the read.
+     */
+    for (i = 0; i < info->register_count; ++i)
+    {
+        ZyanU8 index;
+        ZyanU16 bits;
+        ZyanU8 j;
+        ZydisOperandActions write_bits = 0;
+        ZyanBool partial = ZYAN_FALSE;
+        ZyanBool direct_read = ZYAN_FALSE;
+
+        if (!ZydisInfoVec(info->registers[i].reg, &index, &bits) || (bits == 128))
+        {
+            continue;
+        }
+        for (j = 0; j < operand_count; ++j)
+        {
+            ZyanU8 op_index;
+            ZyanU16 op_bits;
+
+            if ((operands[j].type != ZYDIS_OPERAND_TYPE_REGISTER) ||
+                !ZydisInfoVec(operands[j].reg.value, &op_index, &op_bits) ||
+                (op_index != index))
+            {
+                continue;
+            }
+            if ((operands[j].actions &
+                    (ZYDIS_OPERAND_ACTION_READ | ZYDIS_OPERAND_ACTION_CONDREAD)) &&
+                (op_bits == bits))
+            {
+                direct_read = ZYAN_TRUE;
+            }
+            if ((op_bits < bits) &&
+                (operands[j].actions & ZYDIS_OPERAND_ACTION_WRITE))
+            {
+                if ((operands[j].size != 0) && (operands[j].size < op_bits))
+                {
+                    partial = ZYAN_TRUE;
+                }
+                else
+                {
+                    write_bits = (ZydisOperandActions)(write_bits | ZYDIS_OPERAND_ACTION_WRITE);
+                }
+            }
+        }
+        if (write_bits && !partial && !direct_read)
+        {
+            info->registers[i].action = write_bits;
         }
     }
 

@@ -66,6 +66,34 @@ static int DecodeMode(const char* label, ZydisMachineMode mode, ZydisStackWidth 
 
 static int Decode(const char* label, const ZyanU8* bytes, ZyanUSize length,
     ZydisDecodedInstruction* instruction, ZydisDecodedOperand* operands,
+    ZydisInstructionInfo* info);
+
+static int EncodeRegs(const char* label, ZydisMnemonic mnemonic, ZydisRegister dest,
+    ZydisRegister src, ZydisDecodedInstruction* instruction, ZydisDecodedOperand* operands,
+    ZydisInstructionInfo* info)
+{
+    ZydisEncoderRequest request;
+    ZyanU8 bytes[ZYDIS_MAX_INSTRUCTION_LENGTH];
+    ZyanUSize length = sizeof(bytes);
+
+    memset(&request, 0, sizeof(request));
+    request.machine_mode = ZYDIS_MACHINE_MODE_LONG_64;
+    request.mnemonic = mnemonic;
+    request.operand_count = 2;
+    request.operands[0].type = ZYDIS_OPERAND_TYPE_REGISTER;
+    request.operands[0].reg.value = dest;
+    request.operands[1].type = ZYDIS_OPERAND_TYPE_REGISTER;
+    request.operands[1].reg.value = src;
+    if (ZYAN_FAILED(ZydisEncoderEncodeInstruction(&request, bytes, &length)))
+    {
+        Fail(label, "encode");
+        return 0;
+    }
+    return Decode(label, bytes, length, instruction, operands, info);
+}
+
+static int Decode(const char* label, const ZyanU8* bytes, ZyanUSize length,
+    ZydisDecodedInstruction* instruction, ZydisDecodedOperand* operands,
     ZydisInstructionInfo* info)
 {
     return DecodeMode(label, ZYDIS_MACHINE_MODE_LONG_64, ZYDIS_STACK_WIDTH_64, bytes, length,
@@ -300,6 +328,8 @@ int main(void)
         if (Decode("fld", bytes, sizeof(bytes), &instruction, operands, &info))
         {
             ExpectFpu("fld", &info, 1);
+            ExpectReg("fld", &info, ZYDIS_REGISTER_ST0, ZYDIS_OPERAND_ACTION_WRITE);
+            ExpectReg("fld", &info, ZYDIS_REGISTER_MM0, ZYDIS_OPERAND_ACTION_WRITE);
             if ((info.memory_count != 1) || (info.memory[0].action != ZYDIS_OPERAND_ACTION_READ))
             {
                 Fail("fld", "memory");
@@ -427,6 +457,70 @@ int main(void)
         }
     }
 
+    if (EncodeRegs("movaps", ZYDIS_MNEMONIC_MOVAPS, ZYDIS_REGISTER_XMM0, ZYDIS_REGISTER_XMM1,
+            &instruction, operands, &info))
+    {
+        ExpectReg("movaps", &info, ZYDIS_REGISTER_XMM0, ZYDIS_OPERAND_ACTION_WRITE);
+        ExpectReg("movaps", &info, ZYDIS_REGISTER_YMM0, ZYDIS_OPERAND_ACTION_WRITE);
+        ExpectReg("movaps", &info, ZYDIS_REGISTER_ZMM0, ZYDIS_OPERAND_ACTION_WRITE);
+        ExpectReg("movaps", &info, ZYDIS_REGISTER_XMM1, ZYDIS_OPERAND_ACTION_READ);
+        ExpectReg("movaps", &info, ZYDIS_REGISTER_YMM1, ZYDIS_OPERAND_ACTION_READ);
+        ExpectReg("movaps", &info, ZYDIS_REGISTER_ZMM1, ZYDIS_OPERAND_ACTION_READ);
+    }
+
+    if (EncodeRegs("addps", ZYDIS_MNEMONIC_ADDPS, ZYDIS_REGISTER_XMM0, ZYDIS_REGISTER_XMM0,
+            &instruction, operands, &info))
+    {
+        ExpectReg("addps", &info, ZYDIS_REGISTER_XMM0, ZYDIS_OPERAND_ACTION_READWRITE);
+        ExpectReg("addps", &info, ZYDIS_REGISTER_YMM0, ZYDIS_OPERAND_ACTION_WRITE);
+        ExpectReg("addps", &info, ZYDIS_REGISTER_ZMM0, ZYDIS_OPERAND_ACTION_WRITE);
+    }
+
+    if (EncodeRegs("movss", ZYDIS_MNEMONIC_MOVSS, ZYDIS_REGISTER_XMM0, ZYDIS_REGISTER_XMM1,
+            &instruction, operands, &info))
+    {
+        ExpectReg("movss", &info, ZYDIS_REGISTER_XMM0, ZYDIS_OPERAND_ACTION_READWRITE);
+        ExpectReg("movss", &info, ZYDIS_REGISTER_YMM0, ZYDIS_OPERAND_ACTION_READWRITE);
+        ExpectReg("movss", &info, ZYDIS_REGISTER_ZMM0, ZYDIS_OPERAND_ACTION_READWRITE);
+    }
+
+    if (EncodeRegs("movq mm", ZYDIS_MNEMONIC_MOVQ, ZYDIS_REGISTER_MM0, ZYDIS_REGISTER_RAX,
+            &instruction, operands, &info))
+    {
+        ExpectReg("movq mm", &info, ZYDIS_REGISTER_MM0, ZYDIS_OPERAND_ACTION_WRITE);
+        ExpectReg("movq mm", &info, ZYDIS_REGISTER_ST0, ZYDIS_OPERAND_ACTION_WRITE);
+    }
+
+    {
+        ZydisEncoderRequest request;
+        ZyanU8 bytes[ZYDIS_MAX_INSTRUCTION_LENGTH];
+        ZyanUSize length = sizeof(bytes);
+
+        memset(&request, 0, sizeof(request));
+        request.machine_mode = ZYDIS_MACHINE_MODE_LONG_64;
+        request.mnemonic = ZYDIS_MNEMONIC_VADDPS;
+        request.operand_count = 3;
+        request.operands[0].type = ZYDIS_OPERAND_TYPE_REGISTER;
+        request.operands[0].reg.value = ZYDIS_REGISTER_YMM0;
+        request.operands[1].type = ZYDIS_OPERAND_TYPE_REGISTER;
+        request.operands[1].reg.value = ZYDIS_REGISTER_YMM0;
+        request.operands[2].type = ZYDIS_OPERAND_TYPE_REGISTER;
+        request.operands[2].reg.value = ZYDIS_REGISTER_YMM1;
+        if (ZYAN_FAILED(ZydisEncoderEncodeInstruction(&request, bytes, &length)) ||
+            !Decode("vaddps", bytes, length, &instruction, operands, &info))
+        {
+            Fail("vaddps", "encode");
+        }
+        else
+        {
+            ExpectReg("vaddps", &info, ZYDIS_REGISTER_YMM0, ZYDIS_OPERAND_ACTION_READWRITE);
+            ExpectReg("vaddps", &info, ZYDIS_REGISTER_XMM0, ZYDIS_OPERAND_ACTION_READWRITE);
+            ExpectReg("vaddps", &info, ZYDIS_REGISTER_ZMM0, ZYDIS_OPERAND_ACTION_WRITE);
+            ExpectReg("vaddps", &info, ZYDIS_REGISTER_YMM1, ZYDIS_OPERAND_ACTION_READ);
+            ExpectReg("vaddps", &info, ZYDIS_REGISTER_ZMM1, ZYDIS_OPERAND_ACTION_READ);
+        }
+    }
+
     {
         static const ZyanU8 bytes[] = { 0x01, 0xC8 };
         if (Decode("add eax, ecx", bytes, sizeof(bytes), &instruction, operands, &info))
@@ -438,6 +532,9 @@ int main(void)
             ExpectReg("add eax, ecx", &info, ZYDIS_REGISTER_ECX, ZYDIS_OPERAND_ACTION_READ);
             ExpectReg("add eax, ecx", &info, ZYDIS_REGISTER_RCX, ZYDIS_OPERAND_ACTION_READ);
             ExpectReg("add eax, ecx", &info, ZYDIS_REGISTER_CH, ZYDIS_OPERAND_ACTION_READ);
+            ExpectReg("add eax, ecx", &info, ZYDIS_REGISTER_RFLAGS, ZYDIS_OPERAND_ACTION_WRITE);
+            ExpectReg("add eax, ecx", &info, ZYDIS_REGISTER_EFLAGS, ZYDIS_OPERAND_ACTION_WRITE);
+            ExpectReg("add eax, ecx", &info, ZYDIS_REGISTER_FLAGS, ZYDIS_OPERAND_ACTION_WRITE);
         }
     }
 

@@ -86,10 +86,11 @@ typedef enum ZydisInstructionFlow_
 /**
  * One register touched by the instruction.
  *
- * GPR accesses are also reported on the other widths of that register. A write to `al` is a
- * partial update of `ax`, `eax`, and `rax`, so those are read and written. A 32-bit write in
- * 64-bit mode zero-extends, so `eax` written means `rax` is written and its upper half is not
- * read. `ah` does not overlap `al`. Segment, IP, and x87 registers stay exact.
+ * GPR, vector, x87/MMX, flag, and IP accesses are also reported on the other views of that
+ * register. A write to `al` is a partial update of `rax`. A 32-bit GPR write in 64-bit mode
+ * zero-extends into `rax`. A write to `xmm0` zeroes the upper bits of `ymm0` and `zmm0`.
+ * `mm0` aliases `st0`. `flags`, `eflags`, and `rflags` are one register, as are `ip`, `eip`,
+ * and `rip`. `ah` does not overlap `al`. Segment registers stay exact.
  */
 typedef struct ZydisInstructionRegisterUse_
 {
