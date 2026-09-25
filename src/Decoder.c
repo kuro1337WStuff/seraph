@@ -36,6 +36,10 @@
 #include <Zydis/Status.h>
 #include <Zydis/Internal/DecoderData.h>
 #include <Zydis/Internal/SharedData.h>
+#include <Zydis/Internal/RegisterEncode.h>
+
+/* The public encoder stays a call. The decoder uses the inlined lookup. */
+#define ZydisRegisterEncode ZydisRegisterEncodeInline
 
 /* ============================================================================================== */
 /* Macros                                                                                         */

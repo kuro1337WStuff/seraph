@@ -933,6 +933,21 @@ typedef struct ZydisDefinitionAccessedFlags_
 /* ---------------------------------------------------------------------------------------------- */
 
 /**
+ * Instruction-definition tables. The generated sources mark them `static`.
+ * `SharedData.c` strips that so these lookups can be inlined into the decoder.
+ */
+extern const ZydisInstructionDefinitionLEGACY ISTR_DEFINITIONS_LEGACY[];
+extern const ZydisInstructionDefinition3DNOW ISTR_DEFINITIONS_3DNOW[];
+extern const ZydisInstructionDefinitionXOP ISTR_DEFINITIONS_XOP[];
+extern const ZydisInstructionDefinitionVEX ISTR_DEFINITIONS_VEX[];
+#ifndef ZYDIS_DISABLE_AVX512
+extern const ZydisInstructionDefinitionEVEX ISTR_DEFINITIONS_EVEX[];
+#endif
+#ifndef ZYDIS_DISABLE_KNC
+extern const ZydisInstructionDefinitionMVEX ISTR_DEFINITIONS_MVEX[];
+#endif
+
+/**
  * Returns the instruction-definition with the given `encoding` and `id`.
  *
  * @param   encoding    The instruction-encoding.
@@ -940,14 +955,48 @@ typedef struct ZydisDefinitionAccessedFlags_
  * @param   definition  A pointer to the variable that receives a pointer to the instruction-
  *                      definition.
  */
-ZYDIS_NO_EXPORT void ZydisGetInstructionDefinition(ZydisInstructionEncoding encoding,
-    ZyanU16 id, const ZydisInstructionDefinition** definition);
+ZYAN_INLINE void ZydisGetInstructionDefinition(ZydisInstructionEncoding encoding, ZyanU16 id,
+    const ZydisInstructionDefinition** definition)
+{
+    switch (encoding)
+    {
+    case ZYDIS_INSTRUCTION_ENCODING_LEGACY:
+    case ZYDIS_INSTRUCTION_ENCODING_REX2:
+        *definition = (const ZydisInstructionDefinition*)&ISTR_DEFINITIONS_LEGACY[id];
+        break;
+    case ZYDIS_INSTRUCTION_ENCODING_3DNOW:
+        *definition = (const ZydisInstructionDefinition*)&ISTR_DEFINITIONS_3DNOW[id];
+        break;
+    case ZYDIS_INSTRUCTION_ENCODING_XOP:
+        *definition = (const ZydisInstructionDefinition*)&ISTR_DEFINITIONS_XOP[id];
+        break;
+    case ZYDIS_INSTRUCTION_ENCODING_VEX:
+        *definition = (const ZydisInstructionDefinition*)&ISTR_DEFINITIONS_VEX[id];
+        break;
+#ifndef ZYDIS_DISABLE_AVX512
+    case ZYDIS_INSTRUCTION_ENCODING_EVEX:
+        *definition = (const ZydisInstructionDefinition*)&ISTR_DEFINITIONS_EVEX[id];
+        break;
+#endif
+#ifndef ZYDIS_DISABLE_KNC
+    case ZYDIS_INSTRUCTION_ENCODING_MVEX:
+        *definition = (const ZydisInstructionDefinition*)&ISTR_DEFINITIONS_MVEX[id];
+        break;
+#endif
+    default:
+        ZYAN_UNREACHABLE;
+    }
+}
 
 /* ---------------------------------------------------------------------------------------------- */
 /* Operand definition                                                                             */
 /* ---------------------------------------------------------------------------------------------- */
 
 #ifndef ZYDIS_MINIMAL_MODE
+extern const ZydisOperandDefinition OPERAND_DEFINITIONS[];
+extern const ZyanU16 OPERAND_SIZES[][3];
+extern const ZydisOperandDetails OPERAND_DETAILS[];
+
 /**
  * Returns the the operand-definitions for the given instruction-`definition`.
  *
@@ -955,8 +1004,16 @@ ZYDIS_NO_EXPORT void ZydisGetInstructionDefinition(ZydisInstructionEncoding enco
  *
  * @return  A pointer to the first operand definition of the instruction, or `ZYAN_NULL`.
  */
-ZYDIS_NO_EXPORT const ZydisOperandDefinition* ZydisGetOperandDefinitions(
-    const ZydisInstructionDefinition* definition);
+ZYAN_INLINE const ZydisOperandDefinition* ZydisGetOperandDefinitions(
+    const ZydisInstructionDefinition* definition)
+{
+    if (definition->operand_count == 0)
+    {
+        return ZYAN_NULL;
+    }
+    ZYAN_ASSERT(definition->operand_reference != 0x7FFF);
+    return &OPERAND_DEFINITIONS[definition->operand_reference];
+}
 
 /**
  * Returns size table associated with given operand definition.
@@ -965,7 +1022,10 @@ ZYDIS_NO_EXPORT const ZydisOperandDefinition* ZydisGetOperandDefinitions(
  *
  * @return  A pointer to the beginning of size table.
  */
-ZYDIS_NO_EXPORT const ZyanU16* ZydisGetOperandSizes(const ZydisOperandDefinition *definition);
+ZYAN_INLINE const ZyanU16* ZydisGetOperandSizes(const ZydisOperandDefinition* definition)
+{
+    return OPERAND_SIZES[definition->size_reference];
+}
 
 /**
  * Returns pointer to `ZydisOperandDetails` structure associated with given operand definition.
@@ -974,8 +1034,11 @@ ZYDIS_NO_EXPORT const ZyanU16* ZydisGetOperandSizes(const ZydisOperandDefinition
  *
  * @return  A pointer to `ZydisOperandDetails` structure.
  */
-ZYDIS_NO_EXPORT const ZydisOperandDetails* ZydisGetOperandDetails(
-    const ZydisOperandDefinition *definition);
+ZYAN_INLINE const ZydisOperandDetails* ZydisGetOperandDetails(
+    const ZydisOperandDefinition* definition)
+{
+    return &OPERAND_DETAILS[definition->details_reference];
+}
 #endif
 
 /* ---------------------------------------------------------------------------------------------- */
@@ -990,8 +1053,52 @@ ZYDIS_NO_EXPORT const ZydisOperandDetails* ZydisGetOperandDetails(
  * @param   type    The actual element type.
  * @param   size    The element size.
  */
-ZYDIS_NO_EXPORT void ZydisGetElementInfo(ZydisInternalElementType element, ZydisElementType* type,
-    ZydisElementSize* size);
+ZYAN_INLINE void ZydisGetElementInfo(ZydisInternalElementType element, ZydisElementType* type,
+    ZydisElementSize* size)
+{
+    static const struct
+    {
+        ZydisElementType type;
+        ZydisElementSize size;
+    } lookup[] =
+    {
+        { ZYDIS_ELEMENT_TYPE_INVALID  ,   0 },
+        { ZYDIS_ELEMENT_TYPE_INVALID  ,   0 },
+        { ZYDIS_ELEMENT_TYPE_STRUCT   ,   0 },
+        { ZYDIS_ELEMENT_TYPE_INT      ,   0 },
+        { ZYDIS_ELEMENT_TYPE_UINT     ,   0 },
+        { ZYDIS_ELEMENT_TYPE_INT      ,   1 },
+        { ZYDIS_ELEMENT_TYPE_INT      ,   8 },
+        { ZYDIS_ELEMENT_TYPE_INT      ,  32 },
+        { ZYDIS_ELEMENT_TYPE_INT      ,  16 },
+        { ZYDIS_ELEMENT_TYPE_INT      ,  32 },
+        { ZYDIS_ELEMENT_TYPE_INT      ,  32 },
+        { ZYDIS_ELEMENT_TYPE_INT      ,  64 },
+        { ZYDIS_ELEMENT_TYPE_INT      , 128 },
+        { ZYDIS_ELEMENT_TYPE_UINT     ,   8 },
+        { ZYDIS_ELEMENT_TYPE_UINT     ,  32 },
+        { ZYDIS_ELEMENT_TYPE_UINT     ,  16 },
+        { ZYDIS_ELEMENT_TYPE_UINT     ,  32 },
+        { ZYDIS_ELEMENT_TYPE_UINT     ,  32 },
+        { ZYDIS_ELEMENT_TYPE_UINT     ,  64 },
+        { ZYDIS_ELEMENT_TYPE_UINT     , 128 },
+        { ZYDIS_ELEMENT_TYPE_UINT     , 256 },
+        { ZYDIS_ELEMENT_TYPE_FLOAT16  ,  16 },
+        { ZYDIS_ELEMENT_TYPE_FLOAT16  ,  32 },
+        { ZYDIS_ELEMENT_TYPE_FLOAT32  ,  32 },
+        { ZYDIS_ELEMENT_TYPE_FLOAT64  ,  64 },
+        { ZYDIS_ELEMENT_TYPE_FLOAT80  ,  80 },
+        { ZYDIS_ELEMENT_TYPE_BFLOAT16 ,  16 },
+        { ZYDIS_ELEMENT_TYPE_BFLOAT16 ,  32 },
+        { ZYDIS_ELEMENT_TYPE_LONGBCD  ,  80 },
+        { ZYDIS_ELEMENT_TYPE_CC       ,   3 },
+        { ZYDIS_ELEMENT_TYPE_CC       ,   5 }
+    };
+    ZYAN_ASSERT((ZyanUSize)element < (sizeof(lookup) / sizeof(lookup[0])));
+
+    *type = lookup[element].type;
+    *size = lookup[element].size;
+}
 #endif
 
 /* ---------------------------------------------------------------------------------------------- */
@@ -999,6 +1106,8 @@ ZYDIS_NO_EXPORT void ZydisGetElementInfo(ZydisInternalElementType element, Zydis
 /* ---------------------------------------------------------------------------------------------- */
 
 #ifndef ZYDIS_MINIMAL_MODE
+extern const ZydisDefinitionAccessedFlags ACCESSED_FLAGS[];
+
 /**
  * Returns the the operand-definitions for the given instruction-`definition`.
  *
@@ -1008,8 +1117,12 @@ ZYDIS_NO_EXPORT void ZydisGetElementInfo(ZydisInternalElementType element, Zydis
  *
  * @return  `ZYAN_TRUE`, if the instruction accesses any flags, or `ZYAN_FALSE`, if not.
  */
-ZYDIS_NO_EXPORT ZyanBool ZydisGetAccessedFlags(const ZydisInstructionDefinition* definition,
-    const ZydisDefinitionAccessedFlags** flags);
+ZYAN_INLINE ZyanBool ZydisGetAccessedFlags(const ZydisInstructionDefinition* definition,
+    const ZydisDefinitionAccessedFlags** flags)
+{
+    *flags = &ACCESSED_FLAGS[definition->flags_reference];
+    return (definition->flags_reference != 0);
+}
 #endif
 
 /* ---------------------------------------------------------------------------------------------- */
