@@ -282,9 +282,10 @@ ZyanStatus ZydisGetCpuidFlags(const ZydisDecodedInstruction* instruction,
     {
         return ZYAN_STATUS_INSUFFICIENT_BUFFER_SIZE;
     }
-    for (i = 0; i < n; ++i)
+    /* A plain loop becomes memmove at -O2, which the nostdlib build does not provide. */
+    if (n)
     {
-        flags[i] = row[i];
+        ZYAN_MEMCPY(flags, row, (ZyanUSize)n * sizeof(*flags));
     }
     return ZYAN_STATUS_SUCCESS;
 }
