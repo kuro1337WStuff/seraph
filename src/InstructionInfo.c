@@ -789,6 +789,30 @@ static void ZydisInfoSetFpu(const ZydisDecodedInstruction* instruction, ZydisIns
     }
 }
 
+static void ZydisInfoDropMustWrite(ZydisInstructionInfo* info, ZydisRegister reg)
+{
+    ZyanU8 i;
+
+    for (i = 0; i < info->register_count; ++i)
+    {
+        ZydisOperandActions kept;
+
+        if (info->registers[i].reg != reg)
+        {
+            continue;
+        }
+        if ((info->registers[i].action & ZYDIS_OPERAND_ACTION_WRITE) == 0)
+        {
+            continue;
+        }
+        kept = (ZydisOperandActions)(info->registers[i].action &
+            (ZYDIS_OPERAND_ACTION_READ | ZYDIS_OPERAND_ACTION_CONDREAD |
+                ZYDIS_OPERAND_ACTION_CONDWRITE));
+        info->registers[i].action = (ZydisOperandActions)(kept |
+            ZYDIS_OPERAND_ACTION_CONDWRITE);
+    }
+}
+
 static ZyanStatus ZydisInfoAddX87Stack(ZydisInstructionInfo* info, ZydisMnemonic mnemonic)
 {
     ZyanBool conditional = ZYAN_FALSE;
@@ -796,6 +820,17 @@ static ZyanStatus ZydisInfoAddX87Stack(ZydisInstructionInfo* info, ZydisMnemonic
     ZydisOperandActions move_action;
     ZydisOperandActions st7_action;
     ZyanU8 i;
+
+    /*
+     * fsin and fcos replace st0 only when C2 stays clear. Zydis marks that
+     * write as unconditional. The out-of-range path leaves st0 unchanged.
+     */
+    if ((mnemonic == ZYDIS_MNEMONIC_FSIN) || (mnemonic == ZYDIS_MNEMONIC_FCOS))
+    {
+        ZydisInfoDropMustWrite(info, ZYDIS_REGISTER_ST0);
+        ZydisInfoDropMustWrite(info, ZYDIS_REGISTER_MM0);
+        return ZYAN_STATUS_SUCCESS;
+    }
 
     if (kind == 0)
     {
@@ -833,6 +868,20 @@ static ZyanStatus ZydisInfoAddX87Stack(ZydisInstructionInfo* info, ZydisMnemonic
         if (ZYAN_FAILED(status))
         {
             return status;
+        }
+    }
+
+    /*
+     * fptan and fsincos push only when C2 stays clear. Zydis still marks st0
+     * and st1 as unconditional writes for that result. Those writes are the
+     * conditional push, so the must-write bit does not stay. st0 keeps its read.
+     */
+    if (conditional)
+    {
+        for (i = 0; i < 8; ++i)
+        {
+            ZydisInfoDropMustWrite(info, (ZydisRegister)(ZYDIS_REGISTER_ST0 + i));
+            ZydisInfoDropMustWrite(info, (ZydisRegister)(ZYDIS_REGISTER_MM0 + i));
         }
     }
     return ZYAN_STATUS_SUCCESS;

@@ -125,7 +125,10 @@ typedef struct ZydisInstructionMemoryUse_
  * `fpu_delta` is how many values the x87 stack gains. `fld` is `+1` and `fstp` is
  * `-1`. It is valid only when `fpu_delta_known` is true. A push reads `st0`–`st6`
  * and writes `st0`–`st7` (`st7` is overwritten and not read). A pop reads and
- * writes all eight. `fdecstp` and `fincstp` rotate all eight.
+ * writes all eight. `fdecstp` and `fincstp` rotate all eight. `fptan` and
+ * `fsincos` push only when C2 stays clear, so the delta is unknown. `st0` is
+ * still read, and the stack writes are conditional. `fsin` and `fcos` write
+ * `st0` only on that same in-range path.
  */
 typedef struct ZydisInstructionInfo_
 {

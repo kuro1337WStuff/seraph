@@ -377,6 +377,83 @@ int main(void)
     }
 
     {
+        static const ZyanU8 bytes[] = { 0xD9, 0xF2 };
+        const ZydisOperandActions st0_action = (ZydisOperandActions)(
+            ZYDIS_OPERAND_ACTION_READ | ZYDIS_OPERAND_ACTION_CONDREAD |
+            ZYDIS_OPERAND_ACTION_CONDWRITE);
+
+        if (Decode("fptan", bytes, sizeof(bytes), &instruction, operands, &info))
+        {
+            if (info.fpu_delta_known)
+            {
+                Fail("fptan", "delta should be unknown");
+            }
+            ExpectReg("fptan", &info, ZYDIS_REGISTER_ST0, st0_action);
+            ExpectReg("fptan", &info, ZYDIS_REGISTER_ST1,
+                ZYDIS_OPERAND_ACTION_CONDREAD_CONDWRITE);
+            ExpectReg("fptan", &info, ZYDIS_REGISTER_ST6,
+                ZYDIS_OPERAND_ACTION_CONDREAD_CONDWRITE);
+            ExpectReg("fptan", &info, ZYDIS_REGISTER_ST7, ZYDIS_OPERAND_ACTION_CONDWRITE);
+            ExpectReg("fptan", &info, ZYDIS_REGISTER_MM0, st0_action);
+            ExpectReg("fptan", &info, ZYDIS_REGISTER_MM1,
+                ZYDIS_OPERAND_ACTION_CONDREAD_CONDWRITE);
+            ExpectReg("fptan", &info, ZYDIS_REGISTER_MM7, ZYDIS_OPERAND_ACTION_CONDWRITE);
+        }
+    }
+
+    {
+        static const ZyanU8 bytes[] = { 0xD9, 0xFB };
+        const ZydisOperandActions st0_action = (ZydisOperandActions)(
+            ZYDIS_OPERAND_ACTION_READ | ZYDIS_OPERAND_ACTION_CONDREAD |
+            ZYDIS_OPERAND_ACTION_CONDWRITE);
+
+        if (Decode("fsincos", bytes, sizeof(bytes), &instruction, operands, &info))
+        {
+            if (info.fpu_delta_known)
+            {
+                Fail("fsincos", "delta should be unknown");
+            }
+            ExpectReg("fsincos", &info, ZYDIS_REGISTER_ST0, st0_action);
+            ExpectReg("fsincos", &info, ZYDIS_REGISTER_ST1,
+                ZYDIS_OPERAND_ACTION_CONDREAD_CONDWRITE);
+            ExpectReg("fsincos", &info, ZYDIS_REGISTER_ST7, ZYDIS_OPERAND_ACTION_CONDWRITE);
+            ExpectReg("fsincos", &info, ZYDIS_REGISTER_MM0, st0_action);
+            ExpectReg("fsincos", &info, ZYDIS_REGISTER_MM7, ZYDIS_OPERAND_ACTION_CONDWRITE);
+        }
+    }
+
+    {
+        static const ZyanU8 bytes[] = { 0xD9, 0xFE };
+
+        if (Decode("fsin", bytes, sizeof(bytes), &instruction, operands, &info))
+        {
+            if (info.fpu_delta_known)
+            {
+                Fail("fsin", "delta should be unknown");
+            }
+            ExpectReg("fsin", &info, ZYDIS_REGISTER_ST0, ZYDIS_OPERAND_ACTION_READ_CONDWRITE);
+            ExpectReg("fsin", &info, ZYDIS_REGISTER_MM0, ZYDIS_OPERAND_ACTION_READ_CONDWRITE);
+            ExpectAbsent("fsin", &info, ZYDIS_REGISTER_ST1);
+            ExpectAbsent("fsin", &info, ZYDIS_REGISTER_ST7);
+        }
+    }
+
+    {
+        static const ZyanU8 bytes[] = { 0xD9, 0xFF };
+
+        if (Decode("fcos", bytes, sizeof(bytes), &instruction, operands, &info))
+        {
+            if (info.fpu_delta_known)
+            {
+                Fail("fcos", "delta should be unknown");
+            }
+            ExpectReg("fcos", &info, ZYDIS_REGISTER_ST0, ZYDIS_OPERAND_ACTION_READ_CONDWRITE);
+            ExpectReg("fcos", &info, ZYDIS_REGISTER_MM0, ZYDIS_OPERAND_ACTION_READ_CONDWRITE);
+            ExpectAbsent("fcos", &info, ZYDIS_REGISTER_ST1);
+        }
+    }
+
+    {
         static const ZyanU8 bytes[] = { 0xD9, 0x18 };
         if (Decode("fstp", bytes, sizeof(bytes), &instruction, operands, &info))
         {
