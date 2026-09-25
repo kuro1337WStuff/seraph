@@ -95,21 +95,21 @@ static int Decode(const ZyanU8* bytes, ZyanUSize length, ZydisDecodedInstruction
         (instruction->length == length);
 }
 
-static void ExpectMnemonic(const char* label, ZydisMnemonic mnemonic, int index)
+static void ExpectMnemonic(const char* label, ZydisMnemonic mnemonic, ZydisConditionCode code)
 {
     ZydisConditionCodeInfo info;
 
     info.code = (ZydisConditionCode)7;
     info.tested = 0xFFFFFFFFu;
-    if (ZYAN_FAILED(ZydisGetConditionCode(mnemonic, &info)) || (info.code != index) ||
-        (info.tested != k_flags[index]))
+    if (ZYAN_FAILED(ZydisGetConditionCode(mnemonic, &info)) || (info.code != code) ||
+        (info.tested != k_flags[code]))
     {
         Fail(label, "mnemonic");
     }
 }
 
 static void ExpectDecoded(const char* label, const ZyanU8* bytes, ZyanUSize length,
-    ZydisMnemonic mnemonic, int index, int check_nibble, int check_info_flags)
+    ZydisMnemonic mnemonic, ZydisConditionCode code, int check_nibble, int check_info_flags)
 {
     ZydisDecodedInstruction instruction;
     ZydisDecodedOperand operands[ZYDIS_MAX_OPERAND_COUNT];
@@ -125,15 +125,15 @@ static void ExpectDecoded(const char* label, const ZyanU8* bytes, ZyanUSize leng
         Fail(label, "decoded mnemonic");
         return;
     }
-    if (check_nibble && ((instruction.opcode & 0x0F) != index))
+    if (check_nibble && ((ZyanU8)(instruction.opcode & 0x0F) != (ZyanU8)code))
     {
         Fail(label, "opcode nibble");
     }
-    ExpectMnemonic(label, instruction.mnemonic, index);
+    ExpectMnemonic(label, instruction.mnemonic, code);
     if (check_info_flags)
     {
         if (ZYAN_FAILED(ZydisGetInstructionInfo(&instruction, operands, instruction.operand_count,
-                &flags)) || (flags.flags_tested != k_flags[index]))
+                &flags)) || (flags.flags_tested != k_flags[code]))
         {
             printf("FAIL %s: info flags %08lx\n", label, (unsigned long)flags.flags_tested);
             ++g_failures;
@@ -147,7 +147,8 @@ static void ExpectAbsent(ZydisMnemonic mnemonic)
 
     info.code = (ZydisConditionCode)7;
     info.tested = 0xFFFFFFFFu;
-    if (!ZYAN_FAILED(ZydisGetConditionCode(mnemonic, &info)) || (info.code != 7) ||
+    if (!ZYAN_FAILED(ZydisGetConditionCode(mnemonic, &info)) ||
+        (info.code != (ZydisConditionCode)7) ||
         (info.tested != 0xFFFFFFFFu))
     {
         Fail("absent", "status");
@@ -213,10 +214,10 @@ int main(void)
         cmov[0] = 0x0F;
         cmov[1] = (ZyanU8)(0x40 + i);
         cmov[2] = 0xC0;
-        ExpectDecoded("jcc", jcc, sizeof(jcc), k_jcc[i], i, 1, 1);
-        ExpectDecoded("setcc", setcc, sizeof(setcc), k_set[i], i, 1, 0);
-        ExpectDecoded("cmovcc", cmov, sizeof(cmov), k_cmov[i], i, 1, 0);
-        ExpectMnemonic("setzu", k_setzu[i], i);
+        ExpectDecoded("jcc", jcc, sizeof(jcc), k_jcc[i], (ZydisConditionCode)i, 1, 1);
+        ExpectDecoded("setcc", setcc, sizeof(setcc), k_set[i], (ZydisConditionCode)i, 1, 0);
+        ExpectDecoded("cmovcc", cmov, sizeof(cmov), k_cmov[i], (ZydisConditionCode)i, 1, 0);
+        ExpectMnemonic("setzu", k_setzu[i], (ZydisConditionCode)i);
     }
 
     {
@@ -226,7 +227,8 @@ int main(void)
         ZydisDecodedInstruction instruction;
         ZydisDecodedOperand operands[ZYDIS_MAX_OPERAND_COUNT];
 
-        ExpectDecoded("near jz", near_jz, sizeof(near_jz), ZYDIS_MNEMONIC_JZ, 4, 1, 1);
+        ExpectDecoded("near jz", near_jz, sizeof(near_jz), ZYDIS_MNEMONIC_JZ,
+            ZYDIS_CONDITION_CODE_E, 1, 1);
         if (!Decode(jrcxz, sizeof(jrcxz), &instruction, operands) ||
             (instruction.mnemonic != ZYDIS_MNEMONIC_JRCXZ))
         {
