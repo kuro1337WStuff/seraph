@@ -62,7 +62,7 @@ typedef struct ZydisRegisterLookupItem
 
 #include <Generated/RegisterLookup.inc>
 
-/* Register-class lookup lives in Internal/RegisterEncode.h. */
+/* Register-class lookup is in Internal/RegisterEncode.h. */
 
 /* ============================================================================================== */
 /* Exported functions                                                                             */
@@ -74,7 +74,25 @@ typedef struct ZydisRegisterLookupItem
 
 ZydisRegister ZydisRegisterEncode(ZydisRegisterClass register_class, ZyanU8 id)
 {
-    return ZydisRegisterEncodeInline(register_class, id);
+    if ((register_class == ZYDIS_REGCLASS_INVALID) ||
+        (register_class == ZYDIS_REGCLASS_FLAGS) ||
+        (register_class == ZYDIS_REGCLASS_IP))
+    {
+        return ZYDIS_REGISTER_NONE;
+    }
+
+    if ((ZyanUSize)register_class >= ZYAN_ARRAY_LENGTH(REG_CLASS_LOOKUP))
+    {
+        return ZYDIS_REGISTER_NONE;
+    }
+
+    const ZydisRegisterClassLookupItem* item = &REG_CLASS_LOOKUP[register_class];
+    if (id <= (item->hi - item->lo))
+    {
+        return item->lo + id;
+    }
+
+    return ZYDIS_REGISTER_NONE;
 }
 
 ZyanI8 ZydisRegisterGetId(ZydisRegister reg)

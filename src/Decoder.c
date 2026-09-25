@@ -38,9 +38,6 @@
 #include <Zydis/Internal/SharedData.h>
 #include <Zydis/Internal/RegisterEncode.h>
 
-/* The public encoder stays a call. The decoder uses the inlined lookup. */
-#define ZydisRegisterEncode ZydisRegisterEncodeInline
-
 /* ============================================================================================== */
 /* Macros                                                                                         */
 /* ============================================================================================== */
@@ -1309,7 +1306,7 @@ static ZyanStatus ZydisDecodeOperandRegister(const ZydisDecodedInstruction* inst
         }
     } else
     {
-        operand->reg.value = ZydisRegisterEncode(register_class, register_id);
+        operand->reg.value = ZydisRegisterEncodeInline(register_class, register_id);
         ZYAN_ASSERT(operand->reg.value);
         /*if (!operand->reg.value)
         {
@@ -1419,7 +1416,7 @@ static ZyanStatus ZydisDecodeOperandMemory(const ZydisDecoderContext* context,
         {
             ZYAN_ASSERT(instruction->attributes & ZYDIS_ATTRIB_HAS_SIB);
             operand->mem.index =
-                ZydisRegisterEncode(vidx_register_class ? vidx_register_class : ZYDIS_REGCLASS_GPR32,
+                ZydisRegisterEncodeInline(vidx_register_class ? vidx_register_class : ZYDIS_REGCLASS_GPR32,
                     ZydisCalcRegisterId(context, instruction,
                         vidx_register_class ? ZYDIS_REG_ENCODING_VIDX : ZYDIS_REG_ENCODING_INDEX,
                         vidx_register_class ? vidx_register_class : ZYDIS_REGCLASS_GPR32));
@@ -1479,7 +1476,7 @@ static ZyanStatus ZydisDecodeOperandMemory(const ZydisDecoderContext* context,
         {
             ZYAN_ASSERT(instruction->attributes & ZYDIS_ATTRIB_HAS_SIB);
             operand->mem.index =
-                ZydisRegisterEncode(vidx_register_class ? vidx_register_class : ZYDIS_REGCLASS_GPR64,
+                ZydisRegisterEncodeInline(vidx_register_class ? vidx_register_class : ZYDIS_REGCLASS_GPR64,
                     ZydisCalcRegisterId(context, instruction,
                         vidx_register_class ? ZYDIS_REG_ENCODING_VIDX : ZYDIS_REG_ENCODING_INDEX,
                         vidx_register_class ? vidx_register_class : ZYDIS_REGCLASS_GPR64));
@@ -1556,17 +1553,17 @@ static void ZydisDecodeOperandImplicitRegister(const ZydisDecoder* decoder,
             ZYDIS_REGCLASS_GPR64
         };
         operand->reg.value =
-            ZydisRegisterEncode(lookup[context->eosz_index], definition->reg.reg.id);
+            ZydisRegisterEncodeInline(lookup[context->eosz_index], definition->reg.reg.id);
         break;
     }
     case ZYDIS_IMPLREG_TYPE_GPR_ASZ:
-        operand->reg.value = ZydisRegisterEncode(
+        operand->reg.value = ZydisRegisterEncodeInline(
             (instruction->address_width    == 16) ? ZYDIS_REGCLASS_GPR16  :
             (instruction->address_width    == 32) ? ZYDIS_REGCLASS_GPR32  : ZYDIS_REGCLASS_GPR64,
             definition->reg.reg.id);
         break;
     case ZYDIS_IMPLREG_TYPE_GPR_SSZ:
-        operand->reg.value = ZydisRegisterEncode(
+        operand->reg.value = ZydisRegisterEncodeInline(
             (decoder->stack_width == ZYDIS_STACK_WIDTH_16) ? ZYDIS_REGCLASS_GPR16 :
             (decoder->stack_width == ZYDIS_STACK_WIDTH_32) ? ZYDIS_REGCLASS_GPR32 :
                                                              ZYDIS_REGCLASS_GPR64,
@@ -1621,35 +1618,35 @@ static void ZydisDecodeOperandImplicitMemory(const ZydisDecoder* decoder,
     switch (definition->mem.base)
     {
     case ZYDIS_IMPLMEM_BASE_AGPR_REG:
-        operand->mem.base = ZydisRegisterEncode(lookup[context->easz_index],
+        operand->mem.base = ZydisRegisterEncodeInline(lookup[context->easz_index],
             ZydisCalcRegisterId(context, instruction, ZYDIS_REG_ENCODING_REG,
                 lookup[context->easz_index]));
         break;
     case ZYDIS_IMPLMEM_BASE_AGPR_RM:
-        operand->mem.base = ZydisRegisterEncode(lookup[context->easz_index],
+        operand->mem.base = ZydisRegisterEncodeInline(lookup[context->easz_index],
             ZydisCalcRegisterId(context, instruction, ZYDIS_REG_ENCODING_RM,
                 lookup[context->easz_index]));
         break;
     case ZYDIS_IMPLMEM_BASE_AAX:
-        operand->mem.base = ZydisRegisterEncode(lookup[context->easz_index], 0);
+        operand->mem.base = ZydisRegisterEncodeInline(lookup[context->easz_index], 0);
         break;
     case ZYDIS_IMPLMEM_BASE_ADX:
-        operand->mem.base = ZydisRegisterEncode(lookup[context->easz_index], 2);
+        operand->mem.base = ZydisRegisterEncodeInline(lookup[context->easz_index], 2);
         break;
     case ZYDIS_IMPLMEM_BASE_ABX:
-        operand->mem.base = ZydisRegisterEncode(lookup[context->easz_index], 3);
+        operand->mem.base = ZydisRegisterEncodeInline(lookup[context->easz_index], 3);
         break;
     case ZYDIS_IMPLMEM_BASE_ASI:
-        operand->mem.base = ZydisRegisterEncode(lookup[context->easz_index], 6);
+        operand->mem.base = ZydisRegisterEncodeInline(lookup[context->easz_index], 6);
         break;
     case ZYDIS_IMPLMEM_BASE_ADI:
-        operand->mem.base = ZydisRegisterEncode(lookup[context->easz_index], 7);
+        operand->mem.base = ZydisRegisterEncodeInline(lookup[context->easz_index], 7);
         break;
     case ZYDIS_IMPLMEM_BASE_SSP:
-        operand->mem.base = ZydisRegisterEncode(lookup[decoder->stack_width], 4);
+        operand->mem.base = ZydisRegisterEncodeInline(lookup[decoder->stack_width], 4);
         break;
     case ZYDIS_IMPLMEM_BASE_SBP:
-        operand->mem.base = ZydisRegisterEncode(lookup[decoder->stack_width], 5);
+        operand->mem.base = ZydisRegisterEncodeInline(lookup[decoder->stack_width], 5);
         break;
     default:
         ZYAN_UNREACHABLE;
@@ -1658,7 +1655,7 @@ static void ZydisDecodeOperandImplicitMemory(const ZydisDecoder* decoder,
     if (definition->mem.seg)
     {
         operand->mem.segment =
-            ZydisRegisterEncode(ZYDIS_REGCLASS_SEGMENT, definition->mem.seg - 1);
+            ZydisRegisterEncodeInline(ZYDIS_REGCLASS_SEGMENT, definition->mem.seg - 1);
         ZYAN_ASSERT(operand->mem.segment);
     }
 }
