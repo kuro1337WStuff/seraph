@@ -808,12 +808,12 @@ static ZyanStatus ZydisInfoAddX87Stack(ZydisInstructionInfo* info, ZydisMnemonic
             ZYDIS_OPERAND_ACTION_CONDWRITE);
         st7_action = ZYDIS_OPERAND_ACTION_CONDWRITE;
     }
-    else if ((kind == 1))
+    else if (kind == 1)
     {
         move_action = ZYDIS_OPERAND_ACTION_READWRITE;
         st7_action = ZYDIS_OPERAND_ACTION_WRITE;
     }
-    else if ((kind == 4))
+    else if (kind == 4)
     {
         move_action = ZYDIS_OPERAND_ACTION_WRITE;
         st7_action = ZYDIS_OPERAND_ACTION_WRITE;
