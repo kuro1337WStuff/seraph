@@ -40,6 +40,14 @@ if tests_req and decoder.enabled() and minimal.disabled()
     dependencies: [zydis_dep],
   )
   test('SeraphConditionCode', condition_code)
+  if formatter.enabled()
+    seraph_bench = executable(
+      'SeraphBench',
+      'formatter_bench.c',
+      dependencies: [zydis_dep],
+    )
+    test('SeraphBench', seraph_bench, args: ['200'])
+  endif
   if encoder.enabled()
     block_encoder = executable(
       'SeraphBlockEncoder',
