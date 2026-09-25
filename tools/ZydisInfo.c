@@ -961,6 +961,106 @@ static void PrintDisassembly(const ZydisDecodedInstruction* instruction,
 }
 
 /**
+ * Prints the optional Seraph fields in the same value style as the rest of the tool.
+ */
+static void PrintSeraph(const ZydisDecodedInstruction* instruction,
+    const ZydisDecodedOperand* operands)
+{
+    static const char* const flow_names[] =
+    {
+        "NEXT", "CONDITIONAL-BRANCH", "UNCONDITIONAL-BRANCH", "INDIRECT-BRANCH",
+        "CALL", "INDIRECT-CALL", "RETURN", "INTERRUPT", "SYSCALL", "XBEGIN",
+        "EXCEPTION", "PRIVILEGED"
+    };
+    static const char* const intercept_names[] =
+    {
+        "NONE", "IO", "MSR", "DESCRIPTOR", "VMX", "SVM"
+    };
+    static const char* const cc_names[] =
+    {
+        "O", "NO", "B", "AE", "E", "NE", "BE", "A",
+        "S", "NS", "P", "NP", "L", "GE", "LE", "G"
+    };
+    static const char* const vmx_controls[] =
+    {
+        "NONE", "UNCONDITIONAL", "CPUID", "HLT", "INVLPG", "RDPMC", "RDTSC",
+        "CR3-LOAD", "CR3-STORE", "CR8-LOAD", "CR8-STORE", "CR-MASK", "MOV-DR",
+        "IO", "MSR", "MONITOR", "MWAIT", "PAUSE", "DESCRIPTOR", "WBINVD",
+        "RDRAND", "RDSEED", "INVPCID", "XSS"
+    };
+    static const char* const svm_controls[] =
+    {
+        "NONE", "INTERCEPT", "CR", "DR"
+    };
+    ZydisInstructionInfo info;
+    ZydisConditionCodeInfo cc;
+    ZydisCpuidFlag cpuid_flags[ZYDIS_CPUID_FLAG_MAX_COUNT];
+    ZydisVmExit exit_info;
+    ZyanU8 cpuid_count = 0;
+
+    if (ZYAN_FAILED(ZydisGetInstructionInfo(instruction, operands, instruction->operand_count,
+            &info)))
+    {
+        return;
+    }
+
+    PrintSectionHeader("SERAPH");
+    if (info.flow <= ZYDIS_INSTRUCTION_FLOW_PRIVILEGED)
+    {
+        PRINT_VALUE_B("FLOW", "%s", flow_names[info.flow]);
+    }
+    if (info.intercept <= ZYDIS_INSTRUCTION_INTERCEPT_SVM)
+    {
+        PRINT_VALUE_B("INTERCEPT", "%s", intercept_names[info.intercept]);
+    }
+    if (ZYAN_SUCCESS(ZydisGetConditionCode(instruction->mnemonic, &cc)) &&
+        (cc.code <= ZYDIS_CONDITION_CODE_G))
+    {
+        PRINT_VALUE_G("CONDITION", "%s", cc_names[cc.code]);
+    }
+    if (ZYAN_SUCCESS(ZydisGetCpuidFlags(instruction, cpuid_flags, ZYDIS_CPUID_FLAG_MAX_COUNT,
+            &cpuid_count)) && (cpuid_count > 0))
+    {
+        ZyanU8 i;
+
+        PrintValueLabel("CPUID");
+        ZYAN_FPUTS(CVT100_OUT(COLOR_VALUE_B), ZYAN_STDOUT);
+        for (i = 0; i < cpuid_count; ++i)
+        {
+            const char* name = ZydisCpuidFlagGetString(cpuid_flags[i]);
+            ZYAN_PRINTF("%s%s", name ? name : "?", (i + 1 < cpuid_count) ? " " : "");
+        }
+        ZYAN_PUTS(CVT100_OUT(COLOR_DEFAULT));
+    }
+    if (info.fpu_top_written)
+    {
+        PRINT_VALUE_G("FPU-TOP", "%s", "WRITTEN");
+    }
+    if (ZYAN_FAILED(ZydisGetVmExit(instruction, operands, instruction->operand_count, &exit_info)))
+    {
+        return;
+    }
+    if (exit_info.vmx && (exit_info.vmx_control <= ZYDIS_VMX_CONTROL_XSS))
+    {
+        PRINT_VALUE_G("VMX-REASON", "%u", exit_info.vmx_reason);
+        PRINT_VALUE_B("VMX-CTRL", "%s", vmx_controls[exit_info.vmx_control]);
+    }
+    else
+    {
+        PRINT_VALUE_B("VMX", "%s", "NONE");
+    }
+    if (exit_info.svm && (exit_info.svm_control <= ZYDIS_SVM_CONTROL_DR))
+    {
+        PRINT_VALUE_G("SVM-CODE", "0x%X", exit_info.svm_code);
+        PRINT_VALUE_B("SVM-CTRL", "%s", svm_controls[exit_info.svm_control]);
+    }
+    else
+    {
+        PRINT_VALUE_B("SVM", "%s", "NONE");
+    }
+}
+
+/**
  * Dumps basic instruction info.
  *
  * @param   decoder     A pointer to the `ZydisDecoder` instance.
@@ -1213,6 +1313,9 @@ static void PrintInstruction(const ZydisDecoder* decoder,
         ZYAN_PUTS("");
         PrintAPXInfo(instruction);
     }
+
+    ZYAN_PUTS("");
+    PrintSeraph(instruction, operands);
 
     ZYAN_PUTS("");
     PrintDisassembly(instruction, operands, ZYDIS_FORMATTER_STYLE_ATT);

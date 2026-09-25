@@ -240,6 +240,11 @@ typedef enum ZydisCpuidFlag_
 ZYDIS_EXPORT ZyanStatus ZydisGetCpuidFlags(const ZydisDecodedInstruction* instruction,
     ZydisCpuidFlag* flags, ZyanU8 capacity, ZyanU8* count);
 
+/**
+ * Returns the name of a CPUID feature flag, or `ZYAN_NULL` when `flag` is out of range.
+ */
+ZYDIS_EXPORT const char* ZydisCpuidFlagGetString(ZydisCpuidFlag flag);
+
 #ifdef __cplusplus
 }
 #endif

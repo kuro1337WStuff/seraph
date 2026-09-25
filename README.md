@@ -40,16 +40,9 @@ ctest --test-dir build -C Release --output-on-failure
 
 Merge upstream into `master`. Do not rebase `master`. After a conflict in `CMakeLists.txt`, `meson.build`, `include/Zydis/Zydis.h`, or `msvc/zydis/Zydis.vcxproj`, keep the upstream lines and the Seraph lines.
 
-Workflows in `.grok/workflows/` rebuild, re-run `ctest`, and push `master` when the prove step can quote a green summary:
+`ZydisInfo` prints a `SERAPH` section in the same rows as the rest of the tool. `cpuid` is flow `NEXT` and intercept `NONE`, with VMX reason 10 and SVM code `0x72`. `jz` adds condition `E` and no VM exit.
 
-- `/seraph-build-test`
-- `/seraph-feature` with `args.feature` set to an id from `docs/SERAPH_FEATURES.md`
-
-Open this folder as its own workspace: `grok --cwd` the `seraph` directory. In T3 Code, add the folder with Ctrl+K → Add Project.
-
-Zydis colors the instruction the same way `ZydisInfo` does: a magenta mnemonic, a blue register, a green address, and a red immediate. The cyan text after the bar is what Seraph adds: flow, condition code, intercept, and the VM-exit record. `mov rax, rcx` has no VM exit. `cpuid` stays unprivileged in the normal report and still shows VMX reason 10 and SVM `0x72` here.
-
-![What Seraph adds](./assets/screenshots/SeraphVerbose.png)
+![ZydisInfo SERAPH section](./assets/screenshots/SeraphVerbose.png)
 
 Same 51-instruction buffer, one second. Yellow is before the decoder lookup inlining. Green is after. Instructions per second:
 
