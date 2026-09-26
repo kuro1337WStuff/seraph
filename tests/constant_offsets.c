@@ -41,6 +41,12 @@
 
 static int g_failures = 0;
 
+static void Fail(const char* label, const char* what)
+{
+    printf("FAIL %s: %s\n", label, what);
+    ++g_failures;
+}
+
 static void ExpectU8(const char* label, const char* field, ZyanU8 got, ZyanU8 want)
 {
     if (got != want)
@@ -179,6 +185,91 @@ int main(void)
         {
             printf("FAIL patch disp setup\n");
             ++g_failures;
+        }
+    }
+
+    /* Guest linear address: ZydisCalcAbsoluteAddressSeg folds in the segment base. */
+    {
+        ZyanU8 fs_base_disp[] = { 0x64, 0x8B, 0x40, 0x10 };            /* mov eax, fs:[rax+0x10] */
+        ZyanU8 fs_disp_only[] = { 0x64, 0x8B, 0x04, 0x25, 0x10, 0x00, 0x00, 0x00 }; /* fs:[0x10] */
+        ZydisRegisterContext ctx;
+        ZyanU64 addr;
+        ZyanU8 i;
+        int mem;
+
+        memset(&ctx, 0, sizeof(ctx));
+        ctx.values[ZYDIS_REGISTER_RAX] = 0x1000;
+
+        if (Decode("fs:[rax+0x10]", fs_base_disp, sizeof(fs_base_disp), &instruction, operands))
+        {
+            mem = -1;
+            for (i = 0; i < instruction.operand_count; ++i)
+            {
+                if (operands[i].type == ZYDIS_OPERAND_TYPE_MEMORY)
+                {
+                    mem = (int)i;
+                    break;
+                }
+            }
+            if (mem < 0)
+            {
+                Fail("fs:[rax+0x10]", "no memory operand");
+            }
+            else
+            {
+                /* Effective address only (no segment base). */
+                if (ZYAN_FAILED(ZydisCalcAbsoluteAddressEx(&instruction, &operands[mem], 0, &ctx,
+                        &addr)))
+                {
+                    Fail("fs:[rax+0x10]", "ex status");
+                }
+                ExpectU64("fs:[rax+0x10]", "effective", addr, 0x1010);
+
+                /* segment_base 0 reproduces the effective address. */
+                if (ZYAN_FAILED(ZydisCalcAbsoluteAddressSeg(&instruction, &operands[mem], 0, &ctx,
+                        0, &addr)))
+                {
+                    Fail("fs:[rax+0x10]", "seg flat status");
+                }
+                ExpectU64("fs:[rax+0x10]", "seg flat", addr, 0x1010);
+
+                /* A real FS base is folded into the linear address. */
+                if (ZYAN_FAILED(ZydisCalcAbsoluteAddressSeg(&instruction, &operands[mem], 0, &ctx,
+                        0x00007FFE00000000ULL, &addr)))
+                {
+                    Fail("fs:[rax+0x10]", "seg base status");
+                }
+                ExpectU64("fs:[rax+0x10]", "seg base", addr, 0x00007FFE00001010ULL);
+            }
+        }
+
+        if (Decode("fs:[0x10]", fs_disp_only, sizeof(fs_disp_only), &instruction, operands))
+        {
+            mem = -1;
+            for (i = 0; i < instruction.operand_count; ++i)
+            {
+                if (operands[i].type == ZYDIS_OPERAND_TYPE_MEMORY)
+                {
+                    mem = (int)i;
+                    break;
+                }
+            }
+            if (mem >= 0)
+            {
+                if (ZYAN_FAILED(ZydisCalcAbsoluteAddressSeg(&instruction, &operands[mem], 0, &ctx,
+                        0x1000, &addr)))
+                {
+                    Fail("fs:[0x10]", "seg status");
+                }
+                ExpectU64("fs:[0x10]", "seg base", addr, 0x1010);
+            }
+        }
+
+        /* A null result pointer is rejected. */
+        if (ZydisCalcAbsoluteAddressSeg(&instruction, &operands[0], 0, &ctx, 0, ZYAN_NULL) !=
+                ZYAN_STATUS_INVALID_ARGUMENT)
+        {
+            Fail("seg null", "not rejected");
         }
     }
 

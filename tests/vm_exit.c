@@ -186,6 +186,56 @@ int main(void)
         Fail("small", "buffer");
     }
 
+    /* MOV CR/DR needs operands: fail loud without them, and expose that need. */
+    {
+        ZydisVmExit exit_info;
+
+        /* mov to cr3 with no operands must fail rather than report "no exit". */
+        if (Decode(mov_to_cr3, sizeof(mov_to_cr3), &instruction, operands))
+        {
+            if (!ZydisVmExitNeedsOperands(&instruction))
+            {
+                Fail("mov cr3 needs-operands", "false");
+            }
+            if (ZydisGetVmExit(&instruction, ZYAN_NULL, 0, &exit_info) !=
+                    ZYAN_STATUS_INVALID_ARGUMENT)
+            {
+                Fail("mov cr3 no-operands", "not rejected");
+            }
+        }
+        else
+        {
+            Fail("mov cr3 no-operands", "decode");
+        }
+
+        /* A regular mov needs no operands and correctly reports no exit. */
+        if (Decode(mov_rr, sizeof(mov_rr), &instruction, operands))
+        {
+            if (ZydisVmExitNeedsOperands(&instruction))
+            {
+                Fail("mov rax,rcx needs-operands", "true");
+            }
+            if (ZYAN_FAILED(ZydisGetVmExit(&instruction, ZYAN_NULL, 0, &exit_info)) ||
+                exit_info.vmx || exit_info.svm)
+            {
+                Fail("mov rax,rcx no-operands", "unexpected exit");
+            }
+        }
+        else
+        {
+            Fail("mov rax,rcx no-operands", "decode");
+        }
+
+        /* cpuid is classified from the mnemonic alone, so it needs no operands. */
+        if (Decode(cpuid, sizeof(cpuid), &instruction, operands))
+        {
+            if (ZydisVmExitNeedsOperands(&instruction))
+            {
+                Fail("cpuid needs-operands", "true");
+            }
+        }
+    }
+
     /* VMX and SVM control enum-string accessors. */
     {
         const char* s = ZydisVmxControlGetString(ZYDIS_VMX_CONTROL_CPUID);

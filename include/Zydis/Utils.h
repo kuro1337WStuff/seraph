@@ -96,6 +96,30 @@ ZYDIS_EXPORT ZyanStatus ZydisCalcAbsoluteAddressEx(const ZydisDecodedInstruction
     const ZydisDecodedOperand* operand, ZyanU64 runtime_address,
     const ZydisRegisterContext* register_context, ZyanU64* result_address);
 
+/**
+ * Calculates the guest linear address for a memory operand, including the segment base.
+ *
+ * `ZydisCalcAbsoluteAddressEx` returns the effective address (base + index*scale +
+ * displacement) inside the segment and never adds a segment base, so it is a flat address.
+ * A hypervisor or emulator resolving a non-flat access (`fs:`/`gs:`, real-mode, or V8086)
+ * needs the effective address plus the base of `operand->mem.segment`. This wrapper computes
+ * the effective address with `ZydisCalcAbsoluteAddressEx` and adds `segment_base`, which the
+ * caller looks up for that segment from its own guest state.
+ *
+ * @param   instruction         A pointer to the `ZydisDecodedInstruction` struct.
+ * @param   operand             A pointer to the `ZydisDecodedOperand` struct.
+ * @param   runtime_address     The runtime address of the instruction.
+ * @param   register_context    A pointer to the `ZydisRegisterContext` struct.
+ * @param   segment_base        The base address of `operand->mem.segment`; pass 0 for a flat
+ *                              segment to reproduce `ZydisCalcAbsoluteAddressEx`.
+ * @param   result_address      A pointer to the memory that receives the linear target-address.
+ *
+ * @return  A zyan status code.
+ */
+ZYDIS_EXPORT ZyanStatus ZydisCalcAbsoluteAddressSeg(const ZydisDecodedInstruction* instruction,
+    const ZydisDecodedOperand* operand, ZyanU64 runtime_address,
+    const ZydisRegisterContext* register_context, ZyanU64 segment_base, ZyanU64* result_address);
+
 /* ---------------------------------------------------------------------------------------------- */
 /* Constant offsets                                                                               */
 /* ---------------------------------------------------------------------------------------------- */

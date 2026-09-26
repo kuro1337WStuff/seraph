@@ -146,6 +146,23 @@ ZYDIS_EXPORT ZyanStatus ZydisGetVmExit(const ZydisDecodedInstruction* instructio
     const ZydisDecodedOperand* operands, ZyanU8 operand_count, ZydisVmExit* result);
 
 /**
+ * Reports whether `ZydisGetVmExit` needs the operand array for this instruction.
+ *
+ * All exits are classified from the mnemonic alone except `MOV` to or from a
+ * control or debug register, whose class depends on the CR/DR number and the
+ * direction. A caller that decodes without operands (for a fast exit-dispatch
+ * path) can use this to decode the operands only when it matters; when this
+ * returns `ZYAN_TRUE`, calling `ZydisGetVmExit` with `operand_count` 0 fails
+ * with `ZYAN_STATUS_INVALID_ARGUMENT` rather than reporting a wrong "no exit".
+ *
+ * @param   instruction Decoded instruction.
+ *
+ * @return  `ZYAN_TRUE` if the operands are required, otherwise `ZYAN_FALSE`
+ *          (also `ZYAN_FALSE` for a null instruction).
+ */
+ZYDIS_EXPORT ZyanBool ZydisVmExitNeedsOperands(const ZydisDecodedInstruction* instruction);
+
+/**
  * Returns the human-readable name for a VMX execution control.
  *
  * @param   control The `ZydisVmxControl` value.

@@ -123,9 +123,31 @@ static void ZydisVmExitMovDr(ZydisVmExit* result, ZydisRegister reg, ZyanBool is
         ZYDIS_SVM_CONTROL_DR);
 }
 
+/*
+ * A `MOV` to or from a control or debug register is the one exit whose class
+ * depends on the operands (which CR/DR number, and the direction). It is the
+ * `0F 20`..`0F 23` form, told apart from an ordinary `MOV` by the opcode map
+ * and byte alone, so this check needs no operands.
+ */
+static ZyanBool ZydisVmExitIsMovCrDr(const ZydisDecodedInstruction* instruction)
+{
+    return (instruction->mnemonic == ZYDIS_MNEMONIC_MOV) &&
+        (instruction->opcode_map == ZYDIS_OPCODE_MAP_0F) &&
+        (instruction->opcode >= 0x20) && (instruction->opcode <= 0x23);
+}
+
 /* ============================================================================================== */
 /* Exported functions                                                                             */
 /* ============================================================================================== */
+
+ZyanBool ZydisVmExitNeedsOperands(const ZydisDecodedInstruction* instruction)
+{
+    if (!instruction)
+    {
+        return ZYAN_FALSE;
+    }
+    return ZydisVmExitIsMovCrDr(instruction);
+}
 
 ZyanStatus ZydisGetVmExit(const ZydisDecodedInstruction* instruction,
     const ZydisDecodedOperand* operands, ZyanU8 operand_count, ZydisVmExit* result)
@@ -134,6 +156,18 @@ ZyanStatus ZydisGetVmExit(const ZydisDecodedInstruction* instruction,
     ZyanBool is_write;
 
     if (!instruction || !result || (operand_count && !operands))
+    {
+        return ZYAN_STATUS_INVALID_ARGUMENT;
+    }
+
+    /*
+     * A `MOV CR`/`MOV DR` cannot be classified without operands: the CR/DR
+     * number and direction come from them. Fail loudly instead of reporting a
+     * silent "no exit" for the one mnemonic that needs them. Every other
+     * instruction is classified from the mnemonic alone and an empty operand
+     * list is fine.
+     */
+    if (ZydisVmExitIsMovCrDr(instruction) && (operand_count == 0))
     {
         return ZYAN_STATUS_INVALID_ARGUMENT;
     }

@@ -199,6 +199,39 @@ ZyanStatus ZydisCalcAbsoluteAddressEx(const ZydisDecodedInstruction* instruction
     }
 }
 
+ZYAN_NO_SANITIZE("unsigned-integer-overflow")
+ZyanStatus ZydisCalcAbsoluteAddressSeg(const ZydisDecodedInstruction* instruction,
+    const ZydisDecodedOperand* operand, ZyanU64 runtime_address,
+    const ZydisRegisterContext* register_context, ZyanU64 segment_base, ZyanU64* result_address)
+{
+    ZyanStatus status;
+    ZyanU64 effective;
+
+    if (!result_address)
+    {
+        return ZYAN_STATUS_INVALID_ARGUMENT;
+    }
+
+    /*
+     * `ZydisCalcAbsoluteAddressEx` computes the effective address (the
+     * `base + index*scale + displacement` inside the segment) and never adds a
+     * segment base, so it returns a flat/effective address. A guest linear
+     * address for a non-flat segment (`fs:`/`gs:`, or any real-mode or V8086
+     * segment) is that effective address plus the segment base the caller
+     * looked up for `operand->mem.segment`. Fold it in here so the caller does
+     * not silently lose it. A `segment_base` of 0 reproduces the flat result.
+     */
+    status = ZydisCalcAbsoluteAddressEx(instruction, operand, runtime_address, register_context,
+        &effective);
+    if (ZYAN_FAILED(status))
+    {
+        return status;
+    }
+
+    *result_address = effective + segment_base;
+    return ZYAN_STATUS_SUCCESS;
+}
+
 /* ---------------------------------------------------------------------------------------------- */
 /* Constant offsets                                                                               */
 /* ---------------------------------------------------------------------------------------------- */
