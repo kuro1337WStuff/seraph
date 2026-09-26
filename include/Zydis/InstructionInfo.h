@@ -290,13 +290,17 @@ ZYDIS_EXPORT ZydisInstructionIntercept ZydisGetInterceptClass(
  * the access, and the direction/size/segment, so an MMIO trap handler does not have to reconcile
  * the register-alias list itself. See `ZydisMmioAccess` for the fields.
  *
+ * `operand_count` must equal `instruction->operand_count` (a string op's two memory sides are
+ * implicit operands). A gather/scatter (VSIB) access spans one address per lane and cannot be
+ * described by a single record, so it returns `ZYAN_STATUS_NOT_FOUND`.
+ *
  * @param   instruction     Decoded instruction.
  * @param   operands        Operand array from the decoder.
- * @param   operand_count   Number of valid entries in `operands`.
+ * @param   operand_count   Number of valid entries in `operands`; must be `instruction->operand_count`.
  * @param   access          Receives the distilled access.
  *
  * @return  `ZYAN_STATUS_SUCCESS`, `ZYAN_STATUS_INVALID_ARGUMENT` for a bad argument, or
- *          `ZYAN_STATUS_NOT_FOUND` when the instruction has no memory operand to describe.
+ *          `ZYAN_STATUS_NOT_FOUND` when the instruction has no single memory operand to describe.
  */
 ZYDIS_EXPORT ZyanStatus ZydisGetMmioAccess(const ZydisDecodedInstruction* instruction,
     const ZydisDecodedOperand* operands, ZyanU8 operand_count, ZydisMmioAccess* access);

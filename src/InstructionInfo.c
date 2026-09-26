@@ -1208,9 +1208,19 @@ ZyanStatus ZydisGetMmioAccess(const ZydisDecodedInstruction* instruction,
     ZyanU8 i;
     ZyanBool have_mem = ZYAN_FALSE;
     ZyanBool have_mem2 = ZYAN_FALSE;
+    ZyanBool is_string;
     ZydisOperandActions direction;
 
     if (!instruction || !access || (operand_count && !operands))
+    {
+        return ZYAN_STATUS_INVALID_ARGUMENT;
+    }
+    /*
+     * Require the full operand count. A string op keeps both memory sides in implicit
+     * operands past the visible count, so a caller that passes fewer would miss them; this
+     * also matches `ZydisGetInstructionInfo` and turns a short array into a loud error.
+     */
+    if (operand_count != instruction->operand_count)
     {
         return ZYAN_STATUS_INVALID_ARGUMENT;
     }
@@ -1219,6 +1229,12 @@ ZyanStatus ZydisGetMmioAccess(const ZydisDecodedInstruction* instruction,
     access->segment = ZYDIS_REGISTER_NONE;
     access->gpr = ZYDIS_REGISTER_NONE;
 
+    /* Only a string instruction has two genuine memory sides. For anything else a second
+       memory operand is incidental (a call/push/pop reaching the implicit stack) and is not
+       part of the access being described. */
+    is_string = (instruction->meta.category == ZYDIS_CATEGORY_STRINGOP) ||
+        (instruction->meta.category == ZYDIS_CATEGORY_IOSTRINGOP);
+
     for (i = 0; i < operand_count; ++i)
     {
         const ZydisDecodedOperand* op = &operands[i];
@@ -1226,11 +1242,20 @@ ZyanStatus ZydisGetMmioAccess(const ZydisDecodedInstruction* instruction,
         if ((op->type == ZYDIS_OPERAND_TYPE_MEMORY) && (op->mem.type == ZYDIS_MEMOP_TYPE_MEM))
         {
             ZydisInstructionMemoryUse* slot;
-            if (have_mem && have_mem2)
+            if (!have_mem)
+            {
+                slot = &access->mem;
+                have_mem = ZYAN_TRUE;
+            }
+            else if (is_string && !have_mem2)
+            {
+                slot = &access->mem2;
+                have_mem2 = ZYAN_TRUE;
+            }
+            else
             {
                 continue;
             }
-            slot = have_mem ? &access->mem2 : &access->mem;
             slot->segment = op->mem.segment;
             slot->base = op->mem.base;
             slot->index = op->mem.index;
@@ -1238,14 +1263,6 @@ ZyanStatus ZydisGetMmioAccess(const ZydisDecodedInstruction* instruction,
             slot->disp = op->mem.disp.value;
             slot->size = (ZyanU32)(op->size / 8);
             slot->action = op->actions;
-            if (have_mem)
-            {
-                have_mem2 = ZYAN_TRUE;
-            }
-            else
-            {
-                have_mem = ZYAN_TRUE;
-            }
         }
         else if (i < instruction->operand_count_visible)
         {

@@ -310,11 +310,12 @@ ZyanStatus ZydisGetSignatureMask(const ZydisDecodedInstruction* instruction,
     }
 
     /*
-     * A displacement is an address to wildcard only when it is the whole address:
-     * RIP/EIP-relative, or an absolute `[disp]` with no base and no index. A displacement
-     * added to a base or index register is a struct or array offset and stays in the pattern.
-     * That shape lives on the memory operand, so the policy needs the operands; without them
-     * the displacement is kept.
+     * A displacement is an address to wildcard when it is the whole address: RIP/EIP-relative,
+     * or an absolute address with no base register. With no base, the displacement is the base
+     * address itself (`[disp]`, or a global array's `[index*scale + disp]`), so an index does not
+     * make it a struct offset. A displacement added to a base register is a struct or array
+     * offset and stays in the pattern. That shape lives on the memory operand, so the policy
+     * needs the operands; without them the displacement is kept.
      */
     for (i = 0; i < operand_count; ++i)
     {
@@ -324,8 +325,7 @@ ZyanStatus ZydisGetSignatureMask(const ZydisDecodedInstruction* instruction,
         }
         if ((operands[i].mem.base == ZYDIS_REGISTER_RIP) ||
             (operands[i].mem.base == ZYDIS_REGISTER_EIP) ||
-            ((operands[i].mem.base == ZYDIS_REGISTER_NONE) &&
-             (operands[i].mem.index == ZYDIS_REGISTER_NONE)))
+            (operands[i].mem.base == ZYDIS_REGISTER_NONE))
         {
             disp_is_address = ZYAN_TRUE;
             break;
@@ -388,13 +388,18 @@ ZyanStatus ZydisFormatSignature(const ZydisDecodedInstruction* instruction,
         return status;
     }
 
+    /*
+     * The output is exactly `length * 3` bytes: two hex digits per byte, one space between
+     * bytes, and the terminator (2*length + (length - 1) + 1). Check once so a valid buffer is
+     * never rejected and a short one is caught before any byte is written.
+     */
+    if (capacity < (ZyanUSize)instruction->length * 3)
+    {
+        return ZYAN_STATUS_INSUFFICIENT_BUFFER_SIZE;
+    }
+
     for (i = 0; i < instruction->length; ++i)
     {
-        /* Up to three characters for this byte (" XX" or " ??") plus the terminator. */
-        if (used + 4 > capacity)
-        {
-            return ZYAN_STATUS_INSUFFICIENT_BUFFER_SIZE;
-        }
         if (i)
         {
             buffer[used++] = ' ';

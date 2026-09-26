@@ -931,6 +931,7 @@ int main(void)
         static const ZyanU8 zx[]    = { 0x0F, 0xB6, 0x03 };                 /* movzx eax, byte [rbx] */
         static const ZyanU8 immw[]  = { 0xC7, 0x00, 0x34, 0x12, 0x00, 0x00 }; /* mov dword [rax], 0x1234 */
         static const ZyanU8 movs[]  = { 0xF3, 0xA4 };                       /* rep movsb */
+        static const ZyanU8 callm[] = { 0xFF, 0x10 };                       /* call [rax] */
         static const ZyanU8 nomem[] = { 0x48, 0x89, 0xC8 };                 /* mov rax, rcx */
         ZydisMmioAccess m;
 
@@ -975,6 +976,22 @@ int main(void)
                 ZYAN_STATUS_NOT_FOUND))
         {
             Fail("mmio nomem", "not rejected");
+        }
+        /* An indirect call through memory reaches the implicit stack, but that must not be
+           reported as a two-sided string op. */
+        if (Decode("mmio call", callm, sizeof(callm), &instruction, operands, &info) &&
+            (ZYAN_FAILED(ZydisGetMmioAccess(&instruction, operands, instruction.operand_count, &m)) ||
+             m.is_string_op || (m.direction != ZYDIS_OPERAND_ACTION_READ) || (m.size != 8)))
+        {
+            Fail("mmio call", "descriptor");
+        }
+        /* A short operand count is rejected rather than silently dropping implicit operands. */
+        if (Decode("mmio short", wr, sizeof(wr), &instruction, operands, &info) &&
+            (instruction.operand_count > 0) &&
+            (ZydisGetMmioAccess(&instruction, operands,
+                (ZyanU8)(instruction.operand_count - 1), &m) != ZYAN_STATUS_INVALID_ARGUMENT))
+        {
+            Fail("mmio short", "not rejected");
         }
         if (ZydisGetMmioAccess(ZYAN_NULL, operands, 0, &m) != ZYAN_STATUS_INVALID_ARGUMENT)
         {
