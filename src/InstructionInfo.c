@@ -1195,6 +1195,113 @@ ZydisInstructionIntercept ZydisGetInterceptClass(const ZydisDecodedInstruction* 
     return ZydisInfoIntercept(instruction);
 }
 
+static ZyanBool ZydisMmioIsGpr(ZydisRegister reg)
+{
+    ZydisRegisterClass reg_class = ZydisRegisterGetClass(reg);
+    return (reg_class == ZYDIS_REGCLASS_GPR8) || (reg_class == ZYDIS_REGCLASS_GPR16) ||
+        (reg_class == ZYDIS_REGCLASS_GPR32) || (reg_class == ZYDIS_REGCLASS_GPR64);
+}
+
+ZyanStatus ZydisGetMmioAccess(const ZydisDecodedInstruction* instruction,
+    const ZydisDecodedOperand* operands, ZyanU8 operand_count, ZydisMmioAccess* access)
+{
+    ZyanU8 i;
+    ZyanBool have_mem = ZYAN_FALSE;
+    ZyanBool have_mem2 = ZYAN_FALSE;
+    ZydisOperandActions direction;
+
+    if (!instruction || !access || (operand_count && !operands))
+    {
+        return ZYAN_STATUS_INVALID_ARGUMENT;
+    }
+
+    ZYAN_MEMSET(access, 0, sizeof(*access));
+    access->segment = ZYDIS_REGISTER_NONE;
+    access->gpr = ZYDIS_REGISTER_NONE;
+
+    for (i = 0; i < operand_count; ++i)
+    {
+        const ZydisDecodedOperand* op = &operands[i];
+
+        if ((op->type == ZYDIS_OPERAND_TYPE_MEMORY) && (op->mem.type == ZYDIS_MEMOP_TYPE_MEM))
+        {
+            ZydisInstructionMemoryUse* slot;
+            if (have_mem && have_mem2)
+            {
+                continue;
+            }
+            slot = have_mem ? &access->mem2 : &access->mem;
+            slot->segment = op->mem.segment;
+            slot->base = op->mem.base;
+            slot->index = op->mem.index;
+            slot->scale = op->mem.scale;
+            slot->disp = op->mem.disp.value;
+            slot->size = (ZyanU32)(op->size / 8);
+            slot->action = op->actions;
+            if (have_mem)
+            {
+                have_mem2 = ZYAN_TRUE;
+            }
+            else
+            {
+                have_mem = ZYAN_TRUE;
+            }
+        }
+        else if (i < instruction->operand_count_visible)
+        {
+            /* The explicit non-memory side is the paired register or immediate. Implicit
+               operands (a string op's RSI/RDI/RCX) live past the visible count and are skipped. */
+            if ((op->type == ZYDIS_OPERAND_TYPE_REGISTER) &&
+                (access->gpr == ZYDIS_REGISTER_NONE) && ZydisMmioIsGpr(op->reg.value))
+            {
+                access->gpr = op->reg.value;
+            }
+            else if ((op->type == ZYDIS_OPERAND_TYPE_IMMEDIATE) && !access->has_immediate)
+            {
+                access->has_immediate = ZYAN_TRUE;
+                access->immediate = op->imm.value.u;
+            }
+        }
+    }
+
+    if (!have_mem)
+    {
+        return ZYAN_STATUS_NOT_FOUND;
+    }
+
+    direction = 0;
+    if (access->mem.action & ZYDIS_OPERAND_ACTION_MASK_READ)
+    {
+        direction = (ZydisOperandActions)(direction | ZYDIS_OPERAND_ACTION_READ);
+    }
+    if (access->mem.action & ZYDIS_OPERAND_ACTION_MASK_WRITE)
+    {
+        direction = (ZydisOperandActions)(direction | ZYDIS_OPERAND_ACTION_WRITE);
+    }
+    access->direction = direction;
+    access->size = access->mem.size;
+    access->segment = access->mem.segment;
+    access->is_string_op = have_mem2;
+    access->rep_prefixed = (instruction->attributes &
+        (ZYDIS_ATTRIB_HAS_REP | ZYDIS_ATTRIB_HAS_REPE | ZYDIS_ATTRIB_HAS_REPNE)) ?
+        ZYAN_TRUE : ZYAN_FALSE;
+
+    switch (instruction->mnemonic)
+    {
+    case ZYDIS_MNEMONIC_MOVSX:
+    case ZYDIS_MNEMONIC_MOVSXD:
+        access->sign_extend = ZYAN_TRUE;
+        break;
+    case ZYDIS_MNEMONIC_MOVZX:
+        access->zero_extend = ZYAN_TRUE;
+        break;
+    default:
+        break;
+    }
+
+    return ZYAN_STATUS_SUCCESS;
+}
+
 /* ============================================================================================== */
 /* Enum strings                                                                                   */
 /* ============================================================================================== */

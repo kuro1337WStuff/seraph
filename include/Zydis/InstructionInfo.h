@@ -184,6 +184,34 @@ typedef struct ZydisInstructionInfo_
     ZyanBool fpu_top_written;
 } ZydisInstructionInfo;
 
+/**
+ * A memory access distilled for device emulation (for example an MMIO trap).
+ *
+ * Built from the decoded operands of the faulting instruction. `direction`, `size`, `segment`,
+ * and `mem` describe the primary memory operand. `gpr` is the one explicit general-purpose
+ * register paired with it (the source of a write or the destination of a read), or
+ * `ZYDIS_REGISTER_NONE` when the other side is an immediate or is implicit (string ops).
+ * `has_immediate`/`immediate` carry an immediate source. `sign_extend`/`zero_extend` mark a
+ * widening load (`movsx`/`movsxd`/`movzx`). `is_string_op` is true when the instruction has two
+ * memory sides (`movs`), in which case `mem2` is the second side; `rep_prefixed` reports a
+ * `rep`/`repe`/`repne` prefix.
+ */
+typedef struct ZydisMmioAccess_
+{
+    ZydisOperandActions direction;
+    ZyanU32 size;
+    ZydisRegister segment;
+    ZydisRegister gpr;
+    ZyanBool has_immediate;
+    ZyanU64 immediate;
+    ZyanBool sign_extend;
+    ZyanBool zero_extend;
+    ZyanBool rep_prefixed;
+    ZyanBool is_string_op;
+    ZydisInstructionMemoryUse mem;
+    ZydisInstructionMemoryUse mem2;
+} ZydisMmioAccess;
+
 /* ============================================================================================== */
 /* Exported functions                                                                             */
 /* ============================================================================================== */
@@ -254,6 +282,24 @@ ZYDIS_EXPORT const char* ZydisInstructionInterceptGetString(ZydisInstructionInte
  */
 ZYDIS_EXPORT ZydisInstructionIntercept ZydisGetInterceptClass(
     const ZydisDecodedInstruction* instruction);
+
+/**
+ * Distills a memory access into a `ZydisMmioAccess` for device emulation.
+ *
+ * Scans the operands for the memory operand(s), the one explicit GPR or immediate paired with
+ * the access, and the direction/size/segment, so an MMIO trap handler does not have to reconcile
+ * the register-alias list itself. See `ZydisMmioAccess` for the fields.
+ *
+ * @param   instruction     Decoded instruction.
+ * @param   operands        Operand array from the decoder.
+ * @param   operand_count   Number of valid entries in `operands`.
+ * @param   access          Receives the distilled access.
+ *
+ * @return  `ZYAN_STATUS_SUCCESS`, `ZYAN_STATUS_INVALID_ARGUMENT` for a bad argument, or
+ *          `ZYAN_STATUS_NOT_FOUND` when the instruction has no memory operand to describe.
+ */
+ZYDIS_EXPORT ZyanStatus ZydisGetMmioAccess(const ZydisDecodedInstruction* instruction,
+    const ZydisDecodedOperand* operands, ZyanU8 operand_count, ZydisMmioAccess* access);
 
 /* ============================================================================================== */
 

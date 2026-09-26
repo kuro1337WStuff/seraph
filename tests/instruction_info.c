@@ -924,6 +924,64 @@ int main(void)
         }
     }
 
+    /* MMIO access descriptor. */
+    {
+        static const ZyanU8 wr[]    = { 0x89, 0x18 };                       /* mov [rax], ebx */
+        static const ZyanU8 rd[]    = { 0x8B, 0x03 };                       /* mov eax, [rbx] */
+        static const ZyanU8 zx[]    = { 0x0F, 0xB6, 0x03 };                 /* movzx eax, byte [rbx] */
+        static const ZyanU8 immw[]  = { 0xC7, 0x00, 0x34, 0x12, 0x00, 0x00 }; /* mov dword [rax], 0x1234 */
+        static const ZyanU8 movs[]  = { 0xF3, 0xA4 };                       /* rep movsb */
+        static const ZyanU8 nomem[] = { 0x48, 0x89, 0xC8 };                 /* mov rax, rcx */
+        ZydisMmioAccess m;
+
+        if (Decode("mmio wr", wr, sizeof(wr), &instruction, operands, &info) &&
+            (ZYAN_FAILED(ZydisGetMmioAccess(&instruction, operands, instruction.operand_count, &m)) ||
+             (m.direction != ZYDIS_OPERAND_ACTION_WRITE) || (m.size != 4) ||
+             (m.gpr != ZYDIS_REGISTER_EBX) || (m.segment != ZYDIS_REGISTER_DS) ||
+             m.has_immediate || m.is_string_op))
+        {
+            Fail("mmio wr", "descriptor");
+        }
+        if (Decode("mmio rd", rd, sizeof(rd), &instruction, operands, &info) &&
+            (ZYAN_FAILED(ZydisGetMmioAccess(&instruction, operands, instruction.operand_count, &m)) ||
+             (m.direction != ZYDIS_OPERAND_ACTION_READ) || (m.size != 4) ||
+             (m.gpr != ZYDIS_REGISTER_EAX)))
+        {
+            Fail("mmio rd", "descriptor");
+        }
+        if (Decode("mmio zx", zx, sizeof(zx), &instruction, operands, &info) &&
+            (ZYAN_FAILED(ZydisGetMmioAccess(&instruction, operands, instruction.operand_count, &m)) ||
+             (m.direction != ZYDIS_OPERAND_ACTION_READ) || (m.size != 1) ||
+             (m.gpr != ZYDIS_REGISTER_EAX) || !m.zero_extend))
+        {
+            Fail("mmio zx", "descriptor");
+        }
+        if (Decode("mmio imm", immw, sizeof(immw), &instruction, operands, &info) &&
+            (ZYAN_FAILED(ZydisGetMmioAccess(&instruction, operands, instruction.operand_count, &m)) ||
+             (m.direction != ZYDIS_OPERAND_ACTION_WRITE) || (m.size != 4) ||
+             (m.gpr != ZYDIS_REGISTER_NONE) || !m.has_immediate || (m.immediate != 0x1234)))
+        {
+            Fail("mmio imm", "descriptor");
+        }
+        if (Decode("mmio movs", movs, sizeof(movs), &instruction, operands, &info) &&
+            (ZYAN_FAILED(ZydisGetMmioAccess(&instruction, operands, instruction.operand_count, &m)) ||
+             !m.is_string_op || !m.rep_prefixed || (m.gpr != ZYDIS_REGISTER_NONE) ||
+             (m.segment != ZYDIS_REGISTER_ES) || (m.mem2.segment != ZYDIS_REGISTER_DS)))
+        {
+            Fail("mmio movs", "descriptor");
+        }
+        if (Decode("mmio nomem", nomem, sizeof(nomem), &instruction, operands, &info) &&
+            (ZydisGetMmioAccess(&instruction, operands, instruction.operand_count, &m) !=
+                ZYAN_STATUS_NOT_FOUND))
+        {
+            Fail("mmio nomem", "not rejected");
+        }
+        if (ZydisGetMmioAccess(ZYAN_NULL, operands, 0, &m) != ZYAN_STATUS_INVALID_ARGUMENT)
+        {
+            Fail("mmio null", "not rejected");
+        }
+    }
+
     if (g_failures)
     {
         printf("%d failure(s)\n", g_failures);
