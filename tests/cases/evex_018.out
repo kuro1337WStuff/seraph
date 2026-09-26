@@ -26,6 +26,13 @@
         SAE: N
        MASK: k4 [ZEROING]
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: AVX512F
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vpmovusdb %zmm29, %xmm1 {%k4} {z}
    RELATIVE: vpmovusdb %zmm29, %xmm1 {%k4} {z}

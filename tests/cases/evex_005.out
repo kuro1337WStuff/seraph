@@ -27,6 +27,13 @@
         SAE: N
        MASK: k0 [DISABLED]
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: AVX512F
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vfnmsub213pd %zmm30, %zmm0, %zmm2
    RELATIVE: vfnmsub213pd %zmm30, %zmm0, %zmm2

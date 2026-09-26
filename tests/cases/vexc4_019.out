@@ -28,6 +28,13 @@
   VECTORLEN: 128
   BROADCAST: NONE
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: AVX
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vrsqrtssl -0x5E(%r14), %xmm14, %xmm7
    RELATIVE: vrsqrtssl -0x5E(%r14), %xmm14, %xmm7

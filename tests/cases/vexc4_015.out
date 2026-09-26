@@ -28,6 +28,13 @@
   VECTORLEN: 128
   BROADCAST: NONE
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: AVX
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vpsubsw -0x8650038(%r13), %xmm9, %xmm10
    RELATIVE: vpsubsw -0x8650038(%r13), %xmm9, %xmm10

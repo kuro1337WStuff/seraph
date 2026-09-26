@@ -28,6 +28,13 @@
   VECTORLEN: 128
   BROADCAST: NONE
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: AVX
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vpor (%rdx), %xmm9, %xmm11
    RELATIVE: vpor (%rdx), %xmm9, %xmm11

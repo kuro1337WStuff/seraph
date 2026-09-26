@@ -28,6 +28,13 @@
   VECTORLEN: 128
   BROADCAST: NONE
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: AVX_GFNI
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vgf2p8mulb 0x5D(%rdi), %xmm4, %xmm9
    RELATIVE: vgf2p8mulb 0x5D(%rdi), %xmm4, %xmm9

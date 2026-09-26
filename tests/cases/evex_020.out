@@ -32,6 +32,13 @@
         SAE: N
        MASK: k5 [ZEROING]
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: AVX512F AVX512VL
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vpandd 0x7B15F812(%r9) {1to8}, %ymm5, %ymm14 {%k5} {z}
    RELATIVE: vpandd 0x7B15F812(%r9) {1to8}, %ymm5, %ymm14 {%k5} {z}

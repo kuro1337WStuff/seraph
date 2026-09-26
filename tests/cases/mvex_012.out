@@ -35,6 +35,13 @@
     SWIZZLE: NONE
     CONVERT: FLOAT16
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: KNCE
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vaddsetsps -0x760(%r14) {float16}, %zmm15, %zmm31 {%k6}
    RELATIVE: vaddsetsps -0x760(%r14) {float16}, %zmm15, %zmm31 {%k6}

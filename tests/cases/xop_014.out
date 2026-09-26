@@ -29,6 +29,13 @@
   VECTORLEN: 128
   BROADCAST: NONE
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: XOP
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vpcomq $0xC1, 0x157FB86C(%rcx), %xmm5, %xmm12
    RELATIVE: vpcomq $0xC1, 0x157FB86C(%rcx), %xmm5, %xmm12

@@ -32,6 +32,13 @@
         SAE: N
        MASK: k4 [MERGING]
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: AVX512F AVX512VL
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vpermilpd -0xE0(%r15,%r9,4) {1to2}, %xmm20, %xmm31 {%k4}
    RELATIVE: vpermilpd -0xE0(%r15,%r9,4) {1to2}, %xmm20, %xmm31 {%k4}

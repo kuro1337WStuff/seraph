@@ -28,6 +28,13 @@
   VECTORLEN: 256
   BROADCAST: NONE
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: AVX2
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vpand 0x07(%rbp), %ymm7, %ymm5
    RELATIVE: vpand 0x07(%rbp), %ymm7, %ymm5

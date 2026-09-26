@@ -35,6 +35,13 @@
     SWIZZLE: NONE
     CONVERT: NONE
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: KNCE
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vpmadd231d (%rax) {1to16}, %zmm12, %zmm30 {%k6}
    RELATIVE: vpmadd231d (%rax) {1to16}, %zmm12, %zmm30 {%k6}

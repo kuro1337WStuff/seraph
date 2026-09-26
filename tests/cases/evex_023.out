@@ -27,6 +27,13 @@
         SAE: N
        MASK: k7 [MERGING]
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: AVX512F
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vaddsd %xmm19, %xmm22, %xmm5 {%k7}
    RELATIVE: vaddsd %xmm19, %xmm22, %xmm5 {%k7}

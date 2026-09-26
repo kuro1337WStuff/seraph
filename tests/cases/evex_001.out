@@ -33,6 +33,13 @@
         SAE: N
        MASK: k7 [MERGING]
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: AVX512F
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vinserti64x4 $0x4F, -0x3A0(%rbp), %zmm6, %zmm26 {%k7}
    RELATIVE: vinserti64x4 $0x4F, -0x3A0(%rbp), %zmm6, %zmm26 {%k7}

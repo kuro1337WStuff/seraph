@@ -30,6 +30,13 @@
     SWIZZLE: BADC
     CONVERT: NONE
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: KNCE
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vpandd %zmm3 {badc}, %zmm3, %zmm18 {%k3}
    RELATIVE: vpandd %zmm3 {badc}, %zmm3, %zmm18 {%k3}

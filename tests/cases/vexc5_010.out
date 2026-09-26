@@ -28,6 +28,13 @@
   VECTORLEN: 256
   BROADCAST: NONE
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: AVX
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vcvtsi2ssl 0x1E83B63C(%rax), %xmm13, %xmm11
    RELATIVE: vcvtsi2ssl 0x1E83B63C(%rax), %xmm13, %xmm11

@@ -28,6 +28,13 @@
         SAE: Y
        MASK: k3 [MERGING]
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: AVX512F
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vrndscaless $0xA5, %xmm3 {sae}, %xmm14, %xmm18 {%k3}
    RELATIVE: vrndscaless $0xA5, %xmm3 {sae}, %xmm14, %xmm18 {%k3}

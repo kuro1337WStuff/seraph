@@ -10,6 +10,13 @@
  EXCEPTIONS: NONE
   OPTIMIZED: 9B 
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: X87
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: fwait
    RELATIVE: fwait

@@ -31,6 +31,13 @@
         SAE: N
        MASK: k6 [MERGING]
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: AVX512_FP16 AVX512VL
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vcvtph2dqw 0xE6(%rbx) {1to8}, %ymm30 {%k6}
    RELATIVE: vcvtph2dqw 0xE6(%rbx) {1to8}, %ymm30 {%k6}

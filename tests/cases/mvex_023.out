@@ -35,6 +35,13 @@
     SWIZZLE: NONE
     CONVERT: SINT16
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: KNCE
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vblendmps -0x4BF7E790(%r15) {sint16} {eh}, %zmm16, %zmm20
    RELATIVE: vblendmps -0x4BF7E790(%r15) {sint16} {eh}, %zmm16, %zmm20

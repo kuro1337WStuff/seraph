@@ -30,6 +30,13 @@
     SWIZZLE: DCBA
     CONVERT: NONE
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: KNCE
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vmulps %zmm12, %zmm2, %zmm14 {%k4}
    RELATIVE: vmulps %zmm12, %zmm2, %zmm14 {%k4}

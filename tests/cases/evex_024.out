@@ -33,6 +33,13 @@
         SAE: N
        MASK: k2 [ZEROING]
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: AVX512F
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vrndscaless $0x88, 0x11C(%rcx), %xmm5, %xmm12 {%k2} {z}
    RELATIVE: vrndscaless $0x88, 0x11C(%rcx), %xmm5, %xmm12 {%k2} {z}

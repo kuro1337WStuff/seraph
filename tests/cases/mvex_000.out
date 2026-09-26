@@ -30,6 +30,13 @@
     SWIZZLE: NONE
     CONVERT: NONE
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: KNCE
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vpsrlvd %zmm7, %zmm1, %zmm9 {%k4}
    RELATIVE: vpsrlvd %zmm7, %zmm1, %zmm9 {%k4}

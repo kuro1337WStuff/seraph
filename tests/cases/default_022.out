@@ -24,6 +24,14 @@
        READ: 0x00000040
     WRITTEN: 0x00000000
 
+== [   SERAPH ] ============================================================================================
+       FLOW: CONDITIONAL-BRANCH
+  INTERCEPT: NONE
+  CONDITION: E
+      CPUID: I86
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: jz 0xFFFFFFFFFFFFFFBA
    RELATIVE: jz -0x46

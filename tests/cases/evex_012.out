@@ -32,6 +32,13 @@
         SAE: N
        MASK: k2 [ZEROING]
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: AVX512BW AVX512VL
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vpunpckhbw -0x6F0(%r10), %xmm18, %xmm30 {%k2} {z}
    RELATIVE: vpunpckhbw -0x6F0(%r10), %xmm18, %xmm30 {%k2} {z}

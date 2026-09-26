@@ -35,6 +35,13 @@
     SWIZZLE: NONE
     CONVERT: SINT16
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: KNCE
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vpandd -0x6EF7D7CE(%rcx,%r13,8) {sint16} {eh}, %zmm6, %zmm17 {%k2}
    RELATIVE: vpandd -0x6EF7D7CE(%rcx,%r13,8) {sint16} {eh}, %zmm6, %zmm17 {%k2}

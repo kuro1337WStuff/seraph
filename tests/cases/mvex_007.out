@@ -35,6 +35,13 @@
     SWIZZLE: NONE
     CONVERT: UINT8
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: KNCE
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vblendmps (%r8) {uint8} {eh}, %zmm23, %zmm30 {%k4}
    RELATIVE: vblendmps (%r8) {uint8} {eh}, %zmm23, %zmm30 {%k4}

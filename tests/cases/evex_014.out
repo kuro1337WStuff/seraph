@@ -27,6 +27,13 @@
         SAE: Y
        MASK: k4 [MERGING]
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: AVX512F
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vfmsub132ss %xmm27 {rn-sae}, %xmm12, %xmm18 {%k4}
    RELATIVE: vfmsub132ss %xmm27 {rn-sae}, %xmm12, %xmm18 {%k4}

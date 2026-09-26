@@ -32,6 +32,13 @@
         SAE: N
        MASK: k3 [MERGING]
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: AVX512F
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vscalefpd (%r14), %zmm28, %zmm2 {%k3}
    RELATIVE: vscalefpd (%r14), %zmm28, %zmm2 {%k3}

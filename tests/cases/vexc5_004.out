@@ -28,6 +28,13 @@
   VECTORLEN: 128
   BROADCAST: NONE
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: AVX
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vpmaxub 0xD666(%rbx,%rdx,1), %xmm3, %xmm15
    RELATIVE: vpmaxub 0xD666(%rbx,%rdx,1), %xmm3, %xmm15

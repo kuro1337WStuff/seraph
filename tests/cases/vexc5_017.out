@@ -28,6 +28,13 @@
   VECTORLEN: 128
   BROADCAST: NONE
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: AVX
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vaddsdq -0x24A4A73(%rbx), %xmm13, %xmm11
    RELATIVE: vaddsdq -0x24A4A73(%rbx), %xmm13, %xmm11

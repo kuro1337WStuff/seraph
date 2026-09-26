@@ -30,6 +30,13 @@
     SWIZZLE: CDAB
     CONVERT: NONE
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: KNCE
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vpaddsetsd %zmm2 {cdab}, %zmm24, %zmm22 {%k5}
    RELATIVE: vpaddsetsd %zmm2 {cdab}, %zmm24, %zmm22 {%k5}

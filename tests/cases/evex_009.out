@@ -27,6 +27,13 @@
         SAE: N
        MASK: k3 [MERGING]
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: AVX512F
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vgetexpsd %xmm23, %xmm23, %xmm16 {%k3}
    RELATIVE: vgetexpsd %xmm23, %xmm23, %xmm16 {%k3}

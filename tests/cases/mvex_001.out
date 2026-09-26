@@ -35,6 +35,13 @@
     SWIZZLE: NONE
     CONVERT: NONE
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: KNCE
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vfmsub132pd (%r9) {1to8}, %zmm18, %zmm19 {%k5}
    RELATIVE: vfmsub132pd (%r9) {1to8}, %zmm18, %zmm19 {%k5}

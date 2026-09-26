@@ -30,6 +30,13 @@
     SWIZZLE: NONE
     CONVERT: NONE
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: KNCE
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vaddnps %zmm2 {ru-sae}, %zmm1, %zmm0 {%k1}
    RELATIVE: vaddnps %zmm2 {ru-sae}, %zmm1, %zmm0 {%k1}

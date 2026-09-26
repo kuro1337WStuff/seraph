@@ -27,6 +27,13 @@
   VECTORLEN: 256
   BROADCAST: NONE
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: AVX
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vmovssl 0x3FAD5D8F(%rdi), %xmm8
    RELATIVE: vmovssl 0x3FAD5D8F(%rdi), %xmm8

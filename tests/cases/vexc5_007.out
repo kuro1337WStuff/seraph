@@ -29,6 +29,13 @@
   VECTORLEN: 128
   BROADCAST: NONE
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: AVX
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vpinsrww $0x5D, -0x56(%rbp), %xmm7, %xmm14
    RELATIVE: vpinsrww $0x5D, -0x56(%rbp), %xmm7, %xmm14

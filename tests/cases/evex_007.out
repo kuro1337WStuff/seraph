@@ -33,6 +33,13 @@
         SAE: N
        MASK: k3 [ZEROING]
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: AVX512F
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vshufpd $0x27, (%rdx) {1to8}, %zmm9, %zmm4 {%k3} {z}
    RELATIVE: vshufpd $0x27, (%rdx) {1to8}, %zmm9, %zmm4 {%k3} {z}

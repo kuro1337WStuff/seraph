@@ -35,6 +35,13 @@
     SWIZZLE: NONE
     CONVERT: UINT8
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: KNCE
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vaddsetsps %gs:(%r8,%r12,8) {uint8}, %zmm7, %zmm10 {%k5}
    RELATIVE: vaddsetsps %gs:(%r8,%r12,8) {uint8}, %zmm7, %zmm10 {%k5}

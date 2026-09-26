@@ -29,6 +29,13 @@
   VECTORLEN: 256
   BROADCAST: NONE
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: FMA4
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vfnmsubps %ymm14, (%rbx), %ymm15, %ymm6
    RELATIVE: vfnmsubps %ymm14, (%rbx), %ymm15, %ymm6

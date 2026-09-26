@@ -28,6 +28,13 @@
   VECTORLEN: 128
   BROADCAST: NONE
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: AVX
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vmulsdq (%rcx,%rdx,1), %xmm2, %xmm0
    RELATIVE: vmulsdq (%rcx,%rdx,1), %xmm2, %xmm0

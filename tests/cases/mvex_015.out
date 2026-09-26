@@ -30,6 +30,13 @@
     SWIZZLE: DDDD
     CONVERT: NONE
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: KNCE
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vfmsub132ps %zmm8 {dddd}, %zmm31, %zmm12 {%k1}
    RELATIVE: vfmsub132ps %zmm8 {dddd}, %zmm31, %zmm12 {%k1}

@@ -32,6 +32,13 @@
         SAE: N
        MASK: k6 [ZEROING]
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: AVX512F AVX512VL
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vpcmpeqd -0x77A37021(%rbp) {1to4}, %xmm1, %k4 {%k6}
    RELATIVE: vpcmpeqd -0x77A37021(%rbp) {1to4}, %xmm1, %k4 {%k6}

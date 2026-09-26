@@ -36,6 +36,13 @@
     SWIZZLE: NONE
     CONVERT: UINT8
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: KNCE
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vcmpps $0x69, 0x30844644(%r11) {uint8} {eh}, %zmm2, %k4 {%k7}
    RELATIVE: vcmpps $0x69, 0x30844644(%r11) {uint8} {eh}, %zmm2, %k4 {%k7}

@@ -24,6 +24,13 @@
   VECTORLEN: 128
   BROADCAST: NONE
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: XOP
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vpmadcsswd %xmm2, %xmm8, %xmm2, %xmm8
    RELATIVE: vpmadcsswd %xmm2, %xmm8, %xmm2, %xmm8

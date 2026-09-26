@@ -28,6 +28,13 @@
   VECTORLEN: 128
   BROADCAST: NONE
 
+== [   SERAPH ] ============================================================================================
+       FLOW: NEXT
+  INTERCEPT: NONE
+      CPUID: AVX
+        VMX: NONE
+        SVM: NONE
+
 == [      ATT ] ============================================================================================
    ABSOLUTE: vpcmpgtd 0x10(%rcx), %xmm3, %xmm7
    RELATIVE: vpcmpgtd 0x10(%rcx), %xmm3, %xmm7
