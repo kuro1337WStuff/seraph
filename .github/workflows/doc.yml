@@ -45,6 +45,10 @@ jobs:
           --extra-css /tmp/doxy-theme/doxygen-awesome.css
           --extra-css /tmp/doxy-theme/doxygen-awesome-sidebar-only.css
       - name: Publish documentation
+        # Only the upstream repo can publish to zyantific/doc.zydis.re; a fork has no deploy
+        # key, so the publish step (not the doc build above) would always fail. Skip it off
+        # upstream to keep the fork's CI honest, the same as the removed OSS-Fuzz job.
+        if: github.repository == 'zyantific/zydis'
         uses: cpina/github-action-push-to-another-repository@v1.5
         env:
           SSH_DEPLOY_KEY: ${{ secrets.DOCS_ZYDIS_RE_SSH_DEPLOY_KEY }}
