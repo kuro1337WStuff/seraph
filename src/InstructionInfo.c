@@ -1186,6 +1186,15 @@ ZyanStatus ZydisGetInstructionInfoInsn(const ZydisDecodedInstruction* instructio
     return ZydisGetInstructionInfo(instruction, operands, instruction->operand_count, info);
 }
 
+ZydisInstructionIntercept ZydisGetInterceptClass(const ZydisDecodedInstruction* instruction)
+{
+    if (!instruction)
+    {
+        return ZYDIS_INSTRUCTION_INTERCEPT_NONE;
+    }
+    return ZydisInfoIntercept(instruction);
+}
+
 /* ============================================================================================== */
 /* Enum strings                                                                                   */
 /* ============================================================================================== */

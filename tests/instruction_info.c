@@ -891,6 +891,39 @@ int main(void)
         }
     }
 
+    /* Operand-free intercept classifier matches the full-info field. */
+    {
+        static const ZyanU8 rdmsr_b[] = { 0x0F, 0x32 };
+        static const ZyanU8 lgdt_b[]  = { 0x0F, 0x01, 0x10 };
+        static const ZyanU8 vmrun_b[] = { 0x0F, 0x01, 0xD8 };
+        static const ZyanU8 cpuid_b[] = { 0x0F, 0xA2 };
+        struct { const char* label; const ZyanU8* b; ZyanUSize n;
+            ZydisInstructionIntercept want; } t[4] =
+        {
+            { "rdmsr", rdmsr_b, sizeof(rdmsr_b), ZYDIS_INSTRUCTION_INTERCEPT_MSR },
+            { "lgdt",  lgdt_b,  sizeof(lgdt_b),  ZYDIS_INSTRUCTION_INTERCEPT_DESCRIPTOR },
+            { "vmrun", vmrun_b, sizeof(vmrun_b), ZYDIS_INSTRUCTION_INTERCEPT_SVM },
+            { "cpuid", cpuid_b, sizeof(cpuid_b), ZYDIS_INSTRUCTION_INTERCEPT_NONE }
+        };
+        int k;
+
+        for (k = 0; k < 4; ++k)
+        {
+            if (Decode(t[k].label, t[k].b, t[k].n, &instruction, operands, &info))
+            {
+                if ((ZydisGetInterceptClass(&instruction) != t[k].want) ||
+                    (ZydisGetInterceptClass(&instruction) != info.intercept))
+                {
+                    Fail(t[k].label, "intercept class");
+                }
+            }
+        }
+        if (ZydisGetInterceptClass(ZYAN_NULL) != ZYDIS_INSTRUCTION_INTERCEPT_NONE)
+        {
+            Fail("intercept class", "null");
+        }
+    }
+
     if (g_failures)
     {
         printf("%d failure(s)\n", g_failures);

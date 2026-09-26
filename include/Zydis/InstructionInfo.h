@@ -241,6 +241,20 @@ ZYDIS_EXPORT const char* ZydisInstructionFlowGetString(ZydisInstructionFlow flow
  */
 ZYDIS_EXPORT const char* ZydisInstructionInterceptGetString(ZydisInstructionIntercept intercept);
 
+/**
+ * Returns the hypervisor intercept class of an instruction from the instruction alone.
+ *
+ * This is the same value as `ZydisInstructionInfo.intercept`, but computed without operands
+ * and without building the full info summary, for a hypervisor's fast exit-dispatch path.
+ *
+ * @param   instruction Decoded instruction.
+ *
+ * @return  The `ZydisInstructionIntercept` class, or `ZYDIS_INSTRUCTION_INTERCEPT_NONE` for a
+ *          null instruction.
+ */
+ZYDIS_EXPORT ZydisInstructionIntercept ZydisGetInterceptClass(
+    const ZydisDecodedInstruction* instruction);
+
 /* ============================================================================================== */
 
 #ifdef __cplusplus
