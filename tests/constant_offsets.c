@@ -273,6 +273,71 @@ int main(void)
         }
     }
 
+    /* Signature mask: wildcard only address-bearing bytes; keep constants and struct offsets. */
+    {
+        struct { const char* label; ZyanU8 bytes[16]; ZyanU8 len; const char* sig; } cases[] =
+        {
+            { "call rel32",      { 0xE8, 0x11, 0x22, 0x33, 0x44 }, 5, "E8 ?? ?? ?? ??" },
+            { "mov rax,[rip+d]", { 0x48, 0x8B, 0x05, 0x78, 0x56, 0x34, 0x12 }, 7,
+                "48 8B 05 ?? ?? ?? ??" },
+            { "add rax,8",       { 0x48, 0x83, 0xC0, 0x08 }, 4, "48 83 C0 08" },
+            { "add [rax+d],5",   { 0x83, 0x80, 0x78, 0x56, 0x34, 0x12, 0x05 }, 7,
+                "83 80 78 56 34 12 05" },
+            { "mov rax,[abs64]", { 0x48, 0xA1, 0x00, 0x10, 0x20, 0x30, 0x40, 0x50, 0x60, 0x70 }, 10,
+                "48 A1 ?? ?? ?? ?? ?? ?? ?? ??" },
+            { "jz rel8",         { 0x74, 0x10 }, 2, "74 ??" }
+        };
+        char sig[64];
+        ZyanU8 buf[16];
+        int c;
+
+        for (c = 0; c < (int)(sizeof(cases) / sizeof(cases[0])); ++c)
+        {
+            memcpy(buf, cases[c].bytes, cases[c].len);
+            if (Decode(cases[c].label, buf, cases[c].len, &instruction, operands))
+            {
+                if (ZYAN_FAILED(ZydisFormatSignature(&instruction, operands,
+                        instruction.operand_count, buf, sig, sizeof(sig))) ||
+                    strcmp(sig, cases[c].sig))
+                {
+                    printf("FAIL %s: got '%s' want '%s'\n", cases[c].label, sig, cases[c].sig);
+                    ++g_failures;
+                }
+            }
+        }
+
+        /* Direct mask, small-buffer, and null checks. */
+        {
+            ZyanU8 addc[] = { 0x48, 0x83, 0xC0, 0x08 }; /* add rax, 8 : nothing wildcarded */
+            ZyanU8 mask[16];
+
+            if (Decode("sig mask", addc, sizeof(addc), &instruction, operands))
+            {
+                if (ZYAN_FAILED(ZydisGetSignatureMask(&instruction, operands,
+                        instruction.operand_count, mask, sizeof(mask))) ||
+                    mask[0] || mask[1] || mask[2] || mask[3])
+                {
+                    Fail("sig mask", "add rax,8 wildcarded");
+                }
+                if (ZydisGetSignatureMask(&instruction, operands, instruction.operand_count,
+                        mask, 1) != ZYAN_STATUS_INSUFFICIENT_BUFFER_SIZE)
+                {
+                    Fail("sig mask", "small buffer");
+                }
+                if (ZydisFormatSignature(&instruction, operands, instruction.operand_count,
+                        addc, sig, 3) != ZYAN_STATUS_INSUFFICIENT_BUFFER_SIZE)
+                {
+                    Fail("sig fmt", "small buffer");
+                }
+                if (ZydisGetSignatureMask(ZYAN_NULL, operands, 0, mask, sizeof(mask)) !=
+                        ZYAN_STATUS_INVALID_ARGUMENT)
+                {
+                    Fail("sig mask", "null");
+                }
+            }
+        }
+    }
+
     if (g_failures)
     {
         printf("%d failure(s)\n", g_failures);

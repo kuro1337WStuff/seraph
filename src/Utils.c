@@ -282,4 +282,136 @@ ZyanStatus ZydisGetConstantOffsets(const ZydisDecodedInstruction* instruction,
         &offsets->immediate_size2, &offsets->immediate_offset2);
 }
 
+/* ---------------------------------------------------------------------------------------------- */
+/* Signature mask                                                                                 */
+/* ---------------------------------------------------------------------------------------------- */
+
+ZyanStatus ZydisGetSignatureMask(const ZydisDecodedInstruction* instruction,
+    const ZydisDecodedOperand* operands, ZyanU8 operand_count, ZyanU8* mask,
+    ZyanUSize mask_capacity)
+{
+    ZyanU8 i;
+    ZyanU8 k;
+    ZyanBool disp_is_address = ZYAN_FALSE;
+
+    if (!instruction || !mask || (operand_count && !operands))
+    {
+        return ZYAN_STATUS_INVALID_ARGUMENT;
+    }
+    if (mask_capacity < instruction->length)
+    {
+        return ZYAN_STATUS_INSUFFICIENT_BUFFER_SIZE;
+    }
+
+    /* Keep every byte by default: prefixes, opcode, ModRM, SIB, and genuine constants. */
+    for (i = 0; i < instruction->length; ++i)
+    {
+        mask[i] = 0;
+    }
+
+    /*
+     * A displacement is an address to wildcard only when it is the whole address:
+     * RIP/EIP-relative, or an absolute `[disp]` with no base and no index. A displacement
+     * added to a base or index register is a struct or array offset and stays in the pattern.
+     * That shape lives on the memory operand, so the policy needs the operands; without them
+     * the displacement is kept.
+     */
+    for (i = 0; i < operand_count; ++i)
+    {
+        if (operands[i].type != ZYDIS_OPERAND_TYPE_MEMORY)
+        {
+            continue;
+        }
+        if ((operands[i].mem.base == ZYDIS_REGISTER_RIP) ||
+            (operands[i].mem.base == ZYDIS_REGISTER_EIP) ||
+            ((operands[i].mem.base == ZYDIS_REGISTER_NONE) &&
+             (operands[i].mem.index == ZYDIS_REGISTER_NONE)))
+        {
+            disp_is_address = ZYAN_TRUE;
+            break;
+        }
+    }
+
+    if (disp_is_address && instruction->raw.disp.size)
+    {
+        ZyanU8 off = instruction->raw.disp.offset;
+        ZyanU8 n = (ZyanU8)(instruction->raw.disp.size / 8);
+        for (k = 0; k < n; ++k)
+        {
+            if ((ZyanUSize)(off + k) < instruction->length)
+            {
+                mask[off + k] = 1;
+            }
+        }
+    }
+
+    /* A relative (branch target) or address immediate is wildcarded; a plain constant stays. */
+    for (k = 0; k < 2; ++k)
+    {
+        if (instruction->raw.imm[k].size &&
+            (instruction->raw.imm[k].is_relative || instruction->raw.imm[k].is_address))
+        {
+            ZyanU8 off = instruction->raw.imm[k].offset;
+            ZyanU8 n = (ZyanU8)(instruction->raw.imm[k].size / 8);
+            ZyanU8 j;
+            for (j = 0; j < n; ++j)
+            {
+                if ((ZyanUSize)(off + j) < instruction->length)
+                {
+                    mask[off + j] = 1;
+                }
+            }
+        }
+    }
+
+    return ZYAN_STATUS_SUCCESS;
+}
+
+ZyanStatus ZydisFormatSignature(const ZydisDecodedInstruction* instruction,
+    const ZydisDecodedOperand* operands, ZyanU8 operand_count, const ZyanU8* bytes,
+    char* buffer, ZyanUSize capacity)
+{
+    static const char digits[] = "0123456789ABCDEF";
+    ZyanU8 mask[ZYDIS_MAX_INSTRUCTION_LENGTH];
+    ZyanStatus status;
+    ZyanUSize used = 0;
+    ZyanU8 i;
+
+    if (!instruction || !bytes || !buffer || (capacity == 0))
+    {
+        return ZYAN_STATUS_INVALID_ARGUMENT;
+    }
+
+    status = ZydisGetSignatureMask(instruction, operands, operand_count, mask, sizeof(mask));
+    if (ZYAN_FAILED(status))
+    {
+        return status;
+    }
+
+    for (i = 0; i < instruction->length; ++i)
+    {
+        /* Up to three characters for this byte (" XX" or " ??") plus the terminator. */
+        if (used + 4 > capacity)
+        {
+            return ZYAN_STATUS_INSUFFICIENT_BUFFER_SIZE;
+        }
+        if (i)
+        {
+            buffer[used++] = ' ';
+        }
+        if (mask[i])
+        {
+            buffer[used++] = '?';
+            buffer[used++] = '?';
+        }
+        else
+        {
+            buffer[used++] = digits[(bytes[i] >> 4) & 0x0F];
+            buffer[used++] = digits[bytes[i] & 0x0F];
+        }
+    }
+    buffer[used] = '\0';
+    return ZYAN_STATUS_SUCCESS;
+}
+
 /* ============================================================================================== */

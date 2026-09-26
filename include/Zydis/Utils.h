@@ -121,6 +121,52 @@ ZYDIS_EXPORT ZyanStatus ZydisCalcAbsoluteAddressSeg(const ZydisDecodedInstructio
     const ZydisRegisterContext* register_context, ZyanU64 segment_base, ZyanU64* result_address);
 
 /* ---------------------------------------------------------------------------------------------- */
+/* Signature mask                                                                                 */
+/* ---------------------------------------------------------------------------------------------- */
+
+/**
+ * Builds a byte-match mask for turning an instruction into a search signature.
+ *
+ * Writes `instruction->length` entries into `mask`: 0 for a byte that stays part of the pattern
+ * and 1 for a byte to wildcard. Only address-bearing bytes are wildcarded — a relative branch
+ * target, a RIP/EIP-relative displacement, an absolute `[disp]` address, and an address
+ * immediate — so that a genuine constant (`add rax, 8`) and a struct/array offset
+ * (`mov eax, [rbx+8]`) stay in the pattern and a signature survives a rebuild that only moves
+ * code and data around. The displacement policy needs the operands to tell a struct offset from
+ * an absolute address; when `operand_count` is 0 the displacement is kept.
+ *
+ * @param   instruction     Decoded instruction.
+ * @param   operands        Operand array from the decoder (used for the displacement policy).
+ * @param   operand_count   Number of valid entries in `operands`.
+ * @param   mask            Receives one byte per instruction byte (0 = keep, 1 = wildcard).
+ * @param   mask_capacity   Number of entries `mask` can hold; must be at least `instruction->length`.
+ *
+ * @return  A zyan status code.
+ */
+ZYDIS_EXPORT ZyanStatus ZydisGetSignatureMask(const ZydisDecodedInstruction* instruction,
+    const ZydisDecodedOperand* operands, ZyanU8 operand_count, ZyanU8* mask,
+    ZyanUSize mask_capacity);
+
+/**
+ * Formats an instruction as an IDA-style signature string, e.g. `E8 ?? ?? ?? ??`.
+ *
+ * Applies `ZydisGetSignatureMask` and writes space-separated upper-case hex bytes, with `??`
+ * for each wildcarded byte, into the caller buffer. No libc is used.
+ *
+ * @param   instruction     Decoded instruction.
+ * @param   operands        Operand array from the decoder.
+ * @param   operand_count   Number of valid entries in `operands`.
+ * @param   bytes           The instruction's own bytes (`instruction->length` of them).
+ * @param   buffer          Receives the null-terminated signature text.
+ * @param   capacity        Size of `buffer` in bytes.
+ *
+ * @return  A zyan status code; `ZYAN_STATUS_INSUFFICIENT_BUFFER_SIZE` when `buffer` is too small.
+ */
+ZYDIS_EXPORT ZyanStatus ZydisFormatSignature(const ZydisDecodedInstruction* instruction,
+    const ZydisDecodedOperand* operands, ZyanU8 operand_count, const ZyanU8* bytes,
+    char* buffer, ZyanUSize capacity);
+
+/* ---------------------------------------------------------------------------------------------- */
 /* Constant offsets                                                                               */
 /* ---------------------------------------------------------------------------------------------- */
 
