@@ -145,6 +145,24 @@ typedef struct ZydisVmExit_
 ZYDIS_EXPORT ZyanStatus ZydisGetVmExit(const ZydisDecodedInstruction* instruction,
     const ZydisDecodedOperand* operands, ZyanU8 operand_count, ZydisVmExit* result);
 
+/**
+ * Returns the human-readable name for a VMX execution control.
+ *
+ * @param   control The `ZydisVmxControl` value.
+ *
+ * @return  A static, null-terminated string, or `ZYAN_NULL` for an invalid value.
+ */
+ZYDIS_EXPORT const char* ZydisVmxControlGetString(ZydisVmxControl control);
+
+/**
+ * Returns the human-readable name for an SVM intercept class.
+ *
+ * @param   control The `ZydisSvmControl` value.
+ *
+ * @return  A static, null-terminated string, or `ZYAN_NULL` for an invalid value.
+ */
+ZYDIS_EXPORT const char* ZydisSvmControlGetString(ZydisSvmControl control);
+
 #ifdef __cplusplus
 }
 #endif

@@ -191,15 +191,55 @@ typedef struct ZydisInstructionInfo_
 /**
  * Builds an instruction-info summary from a decoded instruction and its operands.
  *
+ * `operand_count` must equal `instruction->operand_count`, the full count that
+ * includes implicit operands. Passing `operand_count_visible` is rejected with
+ * `ZYAN_STATUS_INVALID_ARGUMENT` rather than silently dropping the implicit
+ * registers (for example the `RAX`/`RDX`/`RFLAGS` written by `mul`). Use
+ * `ZydisGetInstructionInfoInsn` to pass the count automatically.
+ *
  * @param   instruction     Decoded instruction.
  * @param   operands        Operand array from the decoder. May be null when `operand_count` is 0.
- * @param   operand_count   Number of valid entries in `operands`.
+ * @param   operand_count   Number of valid entries in `operands`; must be `instruction->operand_count`.
  * @param   info            Receives the summary.
  *
  * @return  A zyan status code.
  */
 ZYDIS_EXPORT ZyanStatus ZydisGetInstructionInfo(const ZydisDecodedInstruction* instruction,
     const ZydisDecodedOperand* operands, ZyanU8 operand_count, ZydisInstructionInfo* info);
+
+/**
+ * Builds an instruction-info summary using the instruction's own operand count.
+ *
+ * Convenience wrapper over `ZydisGetInstructionInfo` that passes
+ * `instruction->operand_count`, so the caller cannot accidentally truncate the
+ * implicit operands. `operands` must hold that many entries.
+ *
+ * @param   instruction     Decoded instruction.
+ * @param   operands        Operand array from the decoder, `instruction->operand_count` entries.
+ * @param   info            Receives the summary.
+ *
+ * @return  A zyan status code.
+ */
+ZYDIS_EXPORT ZyanStatus ZydisGetInstructionInfoInsn(const ZydisDecodedInstruction* instruction,
+    const ZydisDecodedOperand* operands, ZydisInstructionInfo* info);
+
+/**
+ * Returns the human-readable name for a control-flow kind.
+ *
+ * @param   flow    The `ZydisInstructionFlow` value.
+ *
+ * @return  A static, null-terminated string, or `ZYAN_NULL` for an invalid value.
+ */
+ZYDIS_EXPORT const char* ZydisInstructionFlowGetString(ZydisInstructionFlow flow);
+
+/**
+ * Returns the human-readable name for a hypervisor intercept class.
+ *
+ * @param   intercept   The `ZydisInstructionIntercept` value.
+ *
+ * @return  A static, null-terminated string, or `ZYAN_NULL` for an invalid value.
+ */
+ZYDIS_EXPORT const char* ZydisInstructionInterceptGetString(ZydisInstructionIntercept intercept);
 
 /* ============================================================================================== */
 

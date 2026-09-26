@@ -351,3 +351,66 @@ ZyanStatus ZydisGetVmExit(const ZydisDecodedInstruction* instruction,
 }
 
 /* ============================================================================================== */
+/* Enum strings                                                                                   */
+/* ============================================================================================== */
+
+static const char* const ZYDIS_VMX_CONTROL_NAMES[] =
+{
+    "none",
+    "unconditional",
+    "cpuid",
+    "hlt",
+    "invlpg",
+    "rdpmc",
+    "rdtsc",
+    "cr3-load",
+    "cr3-store",
+    "cr8-load",
+    "cr8-store",
+    "cr-mask",
+    "mov-dr",
+    "io",
+    "msr",
+    "monitor",
+    "mwait",
+    "pause",
+    "descriptor",
+    "wbinvd",
+    "rdrand",
+    "rdseed",
+    "invpcid",
+    "xss"
+};
+
+static const char* const ZYDIS_SVM_CONTROL_NAMES[] =
+{
+    "none",
+    "intercept",
+    "cr",
+    "dr"
+};
+
+ZYAN_STATIC_ASSERT((sizeof(ZYDIS_VMX_CONTROL_NAMES) / sizeof(ZYDIS_VMX_CONTROL_NAMES[0])) ==
+    (ZYDIS_VMX_CONTROL_MAX_VALUE + 1));
+ZYAN_STATIC_ASSERT((sizeof(ZYDIS_SVM_CONTROL_NAMES) / sizeof(ZYDIS_SVM_CONTROL_NAMES[0])) ==
+    (ZYDIS_SVM_CONTROL_MAX_VALUE + 1));
+
+const char* ZydisVmxControlGetString(ZydisVmxControl control)
+{
+    if ((ZyanUSize)control > ZYDIS_VMX_CONTROL_MAX_VALUE)
+    {
+        return ZYAN_NULL;
+    }
+    return ZYDIS_VMX_CONTROL_NAMES[control];
+}
+
+const char* ZydisSvmControlGetString(ZydisSvmControl control)
+{
+    if ((ZyanUSize)control > ZYDIS_SVM_CONTROL_MAX_VALUE)
+    {
+        return ZYAN_NULL;
+    }
+    return ZYDIS_SVM_CONTROL_NAMES[control];
+}
+
+/* ============================================================================================== */

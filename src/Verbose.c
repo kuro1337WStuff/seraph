@@ -30,94 +30,13 @@
 #include <Zydis/Verbose.h>
 #include <Zydis/VmExit.h>
 
-/* ============================================================================================== */
-/* Names                                                                                          */
-/* ============================================================================================== */
-
-static const char* const ZYDIS_VERBOSE_FLOW[] =
-{
-    "next",
-    "conditional-branch",
-    "unconditional-branch",
-    "indirect-branch",
-    "call",
-    "indirect-call",
-    "return",
-    "interrupt",
-    "syscall",
-    "xbegin",
-    "exception",
-    "privileged"
-};
-
-static const char* const ZYDIS_VERBOSE_INTERCEPT[] =
-{
-    "none",
-    "io",
-    "msr",
-    "descriptor",
-    "vmx",
-    "svm"
-};
-
-static const char* const ZYDIS_VERBOSE_CC[] =
-{
-    "o", "no", "b", "ae", "e", "ne", "be", "a",
-    "s", "ns", "p", "np", "l", "ge", "le", "g"
-};
-
-static const char* const ZYDIS_VERBOSE_VMX[] =
-{
-    "none",
-    "unconditional",
-    "cpuid",
-    "hlt",
-    "invlpg",
-    "rdpmc",
-    "rdtsc",
-    "cr3-load",
-    "cr3-store",
-    "cr8-load",
-    "cr8-store",
-    "cr-mask",
-    "mov-dr",
-    "io",
-    "msr",
-    "monitor",
-    "mwait",
-    "pause",
-    "descriptor",
-    "wbinvd",
-    "rdrand",
-    "rdseed",
-    "invpcid",
-    "xss"
-};
-
-static const char* const ZYDIS_VERBOSE_SVM[] =
-{
-    "none",
-    "intercept",
-    "cr",
-    "dr"
-};
-
-ZYAN_STATIC_ASSERT(ZYDIS_INSTRUCTION_FLOW_NEXT == 0);
-ZYAN_STATIC_ASSERT(ZYDIS_INSTRUCTION_FLOW_PRIVILEGED == 11);
-ZYAN_STATIC_ASSERT((sizeof(ZYDIS_VERBOSE_FLOW) / sizeof(ZYDIS_VERBOSE_FLOW[0])) ==
-    (ZYDIS_INSTRUCTION_FLOW_PRIVILEGED + 1));
-ZYAN_STATIC_ASSERT(ZYDIS_INSTRUCTION_INTERCEPT_NONE == 0);
-ZYAN_STATIC_ASSERT((sizeof(ZYDIS_VERBOSE_INTERCEPT) / sizeof(ZYDIS_VERBOSE_INTERCEPT[0])) ==
-    (ZYDIS_INSTRUCTION_INTERCEPT_SVM + 1));
-ZYAN_STATIC_ASSERT(ZYDIS_CONDITION_CODE_O == 0);
-ZYAN_STATIC_ASSERT((sizeof(ZYDIS_VERBOSE_CC) / sizeof(ZYDIS_VERBOSE_CC[0])) ==
-    (ZYDIS_CONDITION_CODE_G + 1));
-ZYAN_STATIC_ASSERT(ZYDIS_VMX_CONTROL_NONE == 0);
-ZYAN_STATIC_ASSERT((sizeof(ZYDIS_VERBOSE_VMX) / sizeof(ZYDIS_VERBOSE_VMX[0])) ==
-    (ZYDIS_VMX_CONTROL_XSS + 1));
-ZYAN_STATIC_ASSERT(ZYDIS_SVM_CONTROL_NONE == 0);
-ZYAN_STATIC_ASSERT((sizeof(ZYDIS_VERBOSE_SVM) / sizeof(ZYDIS_VERBOSE_SVM[0])) ==
-    (ZYDIS_SVM_CONTROL_DR + 1));
+/*
+ * The flow, intercept, condition-code, VMX, and SVM names now live with their
+ * enums (`ZydisInstructionFlowGetString`, `ZydisInstructionInterceptGetString`,
+ * `ZydisConditionCodeGetString`, `ZydisVmxControlGetString`,
+ * `ZydisSvmControlGetString`). This tool uses those accessors instead of a
+ * private copy of the tables.
+ */
 
 /* ============================================================================================== */
 /* Buffer                                                                                         */
@@ -244,7 +163,7 @@ ZyanStatus ZydisFormatVerbose(const ZydisFormatter* formatter,
     {
         return ZYAN_STATUS_INSUFFICIENT_BUFFER_SIZE;
     }
-    status = ZydisVerboseText(line, sizeof(line), &used, ZYDIS_VERBOSE_FLOW[info.flow]);
+    status = ZydisVerboseText(line, sizeof(line), &used, ZydisInstructionFlowGetString(info.flow));
     if (ZYAN_FAILED(status))
     {
         return status;
@@ -257,7 +176,7 @@ ZyanStatus ZydisFormatVerbose(const ZydisFormatter* formatter,
         {
             return status;
         }
-        status = ZydisVerboseText(line, sizeof(line), &used, ZYDIS_VERBOSE_CC[cc.code]);
+        status = ZydisVerboseText(line, sizeof(line), &used, ZydisConditionCodeGetString(cc.code));
         if (ZYAN_FAILED(status))
         {
             return status;
@@ -272,7 +191,7 @@ ZyanStatus ZydisFormatVerbose(const ZydisFormatter* formatter,
     {
         return status;
     }
-    status = ZydisVerboseText(line, sizeof(line), &used, ZYDIS_VERBOSE_INTERCEPT[info.intercept]);
+    status = ZydisVerboseText(line, sizeof(line), &used, ZydisInstructionInterceptGetString(info.intercept));
     if (ZYAN_FAILED(status))
     {
         return status;
@@ -307,7 +226,7 @@ ZyanStatus ZydisFormatVerbose(const ZydisFormatter* formatter,
         {
             return status;
         }
-        status = ZydisVerboseText(line, sizeof(line), &used, ZYDIS_VERBOSE_VMX[exit_info.vmx_control]);
+        status = ZydisVerboseText(line, sizeof(line), &used, ZydisVmxControlGetString(exit_info.vmx_control));
     }
     if (ZYAN_FAILED(status))
     {
@@ -338,7 +257,7 @@ ZyanStatus ZydisFormatVerbose(const ZydisFormatter* formatter,
         {
             return status;
         }
-        status = ZydisVerboseText(line, sizeof(line), &used, ZYDIS_VERBOSE_SVM[exit_info.svm_control]);
+        status = ZydisVerboseText(line, sizeof(line), &used, ZydisSvmControlGetString(exit_info.svm_control));
     }
     if (ZYAN_FAILED(status))
     {

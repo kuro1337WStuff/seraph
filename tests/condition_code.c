@@ -30,6 +30,7 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 
 #include <Zydis/Zydis.h>
 
@@ -257,6 +258,85 @@ int main(void)
         {
             ExpectValue((ZydisConditionCode)code, rows[i].eflags,
                 (rows[i].taken & (1u << code)) ? 1 : 0);
+        }
+    }
+
+    /* Condition-code enum-string accessor. */
+    {
+        const char* s = ZydisConditionCodeGetString(ZYDIS_CONDITION_CODE_E);
+        if (!s || strcmp(s, "e"))
+        {
+            Fail("cc string", "e");
+        }
+        s = ZydisConditionCodeGetString(ZYDIS_CONDITION_CODE_G);
+        if (!s || strcmp(s, "g"))
+        {
+            Fail("cc string", "g");
+        }
+        if (ZydisConditionCodeGetString((ZydisConditionCode)(ZYDIS_CONDITION_CODE_MAX_VALUE + 1)))
+        {
+            Fail("cc string", "out-of-range accepted");
+        }
+    }
+
+    /* In-place condition negation: length preserved, family guarded. */
+    {
+        /* jz rel8 -> jnz rel8 */
+        static const ZyanU8 jz[] = { 0x74, 0x00 };
+        /* setle al -> setnle al */
+        static const ZyanU8 setle[] = { 0x0F, 0x9E, 0xC0 };
+        /* cmovz rax, rcx -> cmovnz rax, rcx (REX prefix exercises the opcode offset) */
+        static const ZyanU8 cmovz[] = { 0x48, 0x0F, 0x44, 0xC1 };
+        /* mov rax, rcx -> must be refused, bytes untouched */
+        static const ZyanU8 mov[] = { 0x48, 0x89, 0xC8 };
+        ZyanU8 buffer[ZYDIS_MAX_INSTRUCTION_LENGTH];
+        ZydisDecodedInstruction instruction;
+        ZydisDecodedOperand operands[ZYDIS_MAX_OPERAND_COUNT];
+
+        struct { const char* label; const ZyanU8* bytes; ZyanUSize length;
+            ZydisMnemonic want; } neg[3] =
+        {
+            { "jz->jnz", jz, sizeof(jz), ZYDIS_MNEMONIC_JNZ },
+            { "setle->setnle", setle, sizeof(setle), ZYDIS_MNEMONIC_SETNLE },
+            { "cmovz->cmovnz", cmovz, sizeof(cmovz), ZYDIS_MNEMONIC_CMOVNZ }
+        };
+        int n;
+
+        for (n = 0; n < 3; ++n)
+        {
+            if (!Decode(neg[n].bytes, neg[n].length, &instruction, operands))
+            {
+                Fail(neg[n].label, "decode");
+                continue;
+            }
+            memcpy(buffer, neg[n].bytes, neg[n].length);
+            if (ZYAN_FAILED(ZydisNegateConditionInPlace(&instruction, buffer, neg[n].length)))
+            {
+                Fail(neg[n].label, "negate status");
+                continue;
+            }
+            if (!Decode(buffer, neg[n].length, &instruction, operands) ||
+                (instruction.length != neg[n].length) ||
+                (instruction.mnemonic != neg[n].want))
+            {
+                Fail(neg[n].label, "result");
+            }
+        }
+
+        /* A non-conditional instruction must be refused and left untouched. */
+        if (Decode(mov, sizeof(mov), &instruction, operands))
+        {
+            memcpy(buffer, mov, sizeof(mov));
+            if (ZydisNegateConditionInPlace(&instruction, buffer, sizeof(mov)) !=
+                    ZYAN_STATUS_NOT_FOUND ||
+                memcmp(buffer, mov, sizeof(mov)) != 0)
+            {
+                Fail("mov negate", "not refused");
+            }
+        }
+        else
+        {
+            Fail("mov negate", "decode");
         }
     }
 

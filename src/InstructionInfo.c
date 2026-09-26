@@ -960,6 +960,18 @@ ZyanStatus ZydisGetInstructionInfo(const ZydisDecodedInstruction* instruction,
         return ZYAN_STATUS_INVALID_ARGUMENT;
     }
 
+    /*
+     * The summary needs every operand, including the implicit ones. `mul rcx`
+     * has one visible operand but four in total (RCX, RAX, RDX, RFLAGS). A
+     * caller that passes `operand_count_visible` would otherwise get a SUCCESS
+     * result that silently drops the implicit registers. Require the full
+     * count so a short array is a loud error, not wrong data.
+     */
+    if (operand_count != instruction->operand_count)
+    {
+        return ZYAN_STATUS_INVALID_ARGUMENT;
+    }
+
     ZYAN_MEMSET(info, 0, sizeof(*info));
     ZydisInfoSetFlow(instruction, operands, operand_count, info);
     info->intercept = ZydisInfoIntercept(instruction);
@@ -1162,6 +1174,69 @@ ZyanStatus ZydisGetInstructionInfo(const ZydisDecodedInstruction* instruction,
     }
 
     return ZydisInfoAddX87Stack(info, instruction->mnemonic);
+}
+
+ZyanStatus ZydisGetInstructionInfoInsn(const ZydisDecodedInstruction* instruction,
+    const ZydisDecodedOperand* operands, ZydisInstructionInfo* info)
+{
+    if (!instruction)
+    {
+        return ZYAN_STATUS_INVALID_ARGUMENT;
+    }
+    return ZydisGetInstructionInfo(instruction, operands, instruction->operand_count, info);
+}
+
+/* ============================================================================================== */
+/* Enum strings                                                                                   */
+/* ============================================================================================== */
+
+static const char* const ZYDIS_FLOW_NAMES[] =
+{
+    "next",
+    "conditional-branch",
+    "unconditional-branch",
+    "indirect-branch",
+    "call",
+    "indirect-call",
+    "return",
+    "interrupt",
+    "syscall",
+    "xbegin",
+    "exception",
+    "privileged"
+};
+
+static const char* const ZYDIS_INTERCEPT_NAMES[] =
+{
+    "none",
+    "io",
+    "msr",
+    "descriptor",
+    "vmx",
+    "svm"
+};
+
+ZYAN_STATIC_ASSERT((sizeof(ZYDIS_FLOW_NAMES) / sizeof(ZYDIS_FLOW_NAMES[0])) ==
+    (ZYDIS_INSTRUCTION_FLOW_MAX_VALUE + 1));
+ZYAN_STATIC_ASSERT((sizeof(ZYDIS_INTERCEPT_NAMES) / sizeof(ZYDIS_INTERCEPT_NAMES[0])) ==
+    (ZYDIS_INSTRUCTION_INTERCEPT_MAX_VALUE + 1));
+
+const char* ZydisInstructionFlowGetString(ZydisInstructionFlow flow)
+{
+    if ((ZyanUSize)flow > ZYDIS_INSTRUCTION_FLOW_MAX_VALUE)
+    {
+        return ZYAN_NULL;
+    }
+    return ZYDIS_FLOW_NAMES[flow];
+}
+
+const char* ZydisInstructionInterceptGetString(ZydisInstructionIntercept intercept)
+{
+    if ((ZyanUSize)intercept > ZYDIS_INSTRUCTION_INTERCEPT_MAX_VALUE)
+    {
+        return ZYAN_NULL;
+    }
+    return ZYDIS_INTERCEPT_NAMES[intercept];
 }
 
 /* ============================================================================================== */

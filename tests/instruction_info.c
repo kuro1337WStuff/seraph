@@ -823,6 +823,74 @@ int main(void)
         }
     }
 
+    /* Implicit-operand count footgun: a short count must fail, not truncate. */
+    {
+        static const ZyanU8 bytes[] = { 0x48, 0xF7, 0xE1 }; /* mul rcx */
+        ZydisDecoder decoder;
+        if (ZYAN_FAILED(ZydisDecoderInit(&decoder, ZYDIS_MACHINE_MODE_LONG_64,
+                ZYDIS_STACK_WIDTH_64)) ||
+            ZYAN_FAILED(ZydisDecoderDecodeFull(&decoder, bytes, sizeof(bytes), &instruction,
+                operands)))
+        {
+            Fail("mul rcx", "decode");
+        }
+        else
+        {
+            if (instruction.operand_count_visible >= instruction.operand_count)
+            {
+                Fail("mul rcx", "expected implicit operands");
+            }
+            if (!ZYAN_FAILED(ZydisGetInstructionInfo(&instruction, operands,
+                    instruction.operand_count_visible, &info)))
+            {
+                Fail("mul rcx", "short count accepted");
+            }
+            if (ZYAN_FAILED(ZydisGetInstructionInfoInsn(&instruction, operands, &info)))
+            {
+                Fail("mul rcx", "insn wrapper failed");
+            }
+            else
+            {
+                ExpectReg("mul rcx", &info, ZYDIS_REGISTER_RAX, ZYDIS_OPERAND_ACTION_READWRITE);
+                ExpectReg("mul rcx", &info, ZYDIS_REGISTER_RDX, ZYDIS_OPERAND_ACTION_WRITE);
+            }
+        }
+    }
+
+    /* Flow and intercept enum-string accessors. */
+    {
+        const char* s = ZydisInstructionFlowGetString(ZYDIS_INSTRUCTION_FLOW_CALL);
+        if (!s || strcmp(s, "call"))
+        {
+            Fail("flow string", "call");
+        }
+        s = ZydisInstructionFlowGetString(ZYDIS_INSTRUCTION_FLOW_PRIVILEGED);
+        if (!s || strcmp(s, "privileged"))
+        {
+            Fail("flow string", "privileged");
+        }
+        if (ZydisInstructionFlowGetString(
+                (ZydisInstructionFlow)(ZYDIS_INSTRUCTION_FLOW_MAX_VALUE + 1)))
+        {
+            Fail("flow string", "out-of-range accepted");
+        }
+        s = ZydisInstructionInterceptGetString(ZYDIS_INSTRUCTION_INTERCEPT_IO);
+        if (!s || strcmp(s, "io"))
+        {
+            Fail("intercept string", "io");
+        }
+        s = ZydisInstructionInterceptGetString(ZYDIS_INSTRUCTION_INTERCEPT_SVM);
+        if (!s || strcmp(s, "svm"))
+        {
+            Fail("intercept string", "svm");
+        }
+        if (ZydisInstructionInterceptGetString(
+                (ZydisInstructionIntercept)(ZYDIS_INSTRUCTION_INTERCEPT_MAX_VALUE + 1)))
+        {
+            Fail("intercept string", "out-of-range accepted");
+        }
+    }
+
     if (g_failures)
     {
         printf("%d failure(s)\n", g_failures);

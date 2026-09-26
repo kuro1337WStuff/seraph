@@ -25,10 +25,20 @@
 ***************************************************************************************************/
 
 #include <Zydis/ConditionCode.h>
+#include <Zydis/Segment.h>
 
 /* ============================================================================================== */
 /* Tables                                                                                         */
 /* ============================================================================================== */
+
+static const char* const ZYDIS_CC_NAMES[] =
+{
+    "o", "no", "b", "ae", "e", "ne", "be", "a",
+    "s", "ns", "p", "np", "l", "ge", "le", "g"
+};
+
+ZYAN_STATIC_ASSERT((sizeof(ZYDIS_CC_NAMES) / sizeof(ZYDIS_CC_NAMES[0])) ==
+    (ZYDIS_CONDITION_CODE_MAX_VALUE + 1));
 
 static const ZydisAccessedFlagsMask ZYDIS_CC_FLAGS[] =
 {
@@ -250,6 +260,82 @@ ZyanStatus ZydisConditionCodeEvaluate(ZydisConditionCode code, ZyanU32 eflags, Z
     }
 
     *value = result ? ZYAN_TRUE : ZYAN_FALSE;
+    return ZYAN_STATUS_SUCCESS;
+}
+
+const char* ZydisConditionCodeGetString(ZydisConditionCode code)
+{
+    if ((ZyanUSize)code > ZYDIS_CONDITION_CODE_MAX_VALUE)
+    {
+        return ZYAN_NULL;
+    }
+    return ZYDIS_CC_NAMES[code];
+}
+
+ZyanStatus ZydisNegateConditionInPlace(const ZydisDecodedInstruction* instruction,
+    ZyanU8* buffer, ZyanUSize length)
+{
+    ZydisConditionCodeInfo info;
+    ZydisInstructionSegments segments;
+    ZyanStatus status;
+    ZyanU8 i;
+    ZyanU8 opcode_offset = 0;
+    ZyanBool have_opcode = ZYAN_FALSE;
+
+    if (!instruction || !buffer)
+    {
+        return ZYAN_STATUS_INVALID_ARGUMENT;
+    }
+    if (length < instruction->length)
+    {
+        return ZYAN_STATUS_INSUFFICIENT_BUFFER_SIZE;
+    }
+
+    /*
+     * Only jcc, setcc, cmovcc, and the APX setzu forms carry a tttn condition
+     * in the low nibble of the opcode byte. `ZydisGetConditionCode` returns
+     * `NOT_FOUND` for everything else (jcxz, loop, fcmov, ccmp, ...), so a
+     * failure here refuses to touch a non-conditional instruction rather than
+     * corrupt it.
+     */
+    status = ZydisGetConditionCode(instruction->mnemonic, &info);
+    if (ZYAN_FAILED(status))
+    {
+        return status;
+    }
+
+    status = ZydisGetInstructionSegments(instruction, &segments);
+    if (ZYAN_FAILED(status))
+    {
+        return status;
+    }
+    for (i = 0; i < segments.count; ++i)
+    {
+        if (segments.segments[i].type == ZYDIS_INSTR_SEGMENT_OPCODE)
+        {
+            /* The tttn byte is the last byte of the opcode segment. */
+            opcode_offset = (ZyanU8)(segments.segments[i].offset +
+                segments.segments[i].size - 1);
+            have_opcode = ZYAN_TRUE;
+            break;
+        }
+    }
+    if (!have_opcode || (opcode_offset >= instruction->length))
+    {
+        return ZYAN_STATUS_NOT_FOUND;
+    }
+
+    /*
+     * Guard against corrupting an instruction whose opcode nibble does not
+     * match the reported condition (should not happen for the tttn family).
+     */
+    if ((ZyanU8)(buffer[opcode_offset] & 0x0F) != (ZyanU8)info.code)
+    {
+        return ZYAN_STATUS_NOT_FOUND;
+    }
+
+    /* Inverting the condition is a flip of the low tttn bit; length is kept. */
+    buffer[opcode_offset] ^= 0x01;
     return ZYAN_STATUS_SUCCESS;
 }
 

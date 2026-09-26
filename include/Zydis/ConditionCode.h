@@ -122,6 +122,38 @@ ZYDIS_EXPORT ZyanStatus ZydisGetConditionCode(ZydisMnemonic mnemonic,
 ZYDIS_EXPORT ZyanStatus ZydisConditionCodeEvaluate(ZydisConditionCode code, ZyanU32 eflags,
     ZyanBool* value);
 
+/**
+ * Returns the human-readable name for a condition code (`e`, `ne`, `a`, ...).
+ *
+ * @param   code    The `ZydisConditionCode` value.
+ *
+ * @return  A static, null-terminated string, or `ZYAN_NULL` for an invalid value.
+ */
+ZYDIS_EXPORT const char* ZydisConditionCodeGetString(ZydisConditionCode code);
+
+/**
+ * Inverts the condition of a `jcc`, `setcc`, `cmovcc`, or APX `setzu`
+ * instruction directly in its own encoded bytes, in place.
+ *
+ * The instruction length is preserved: only the low bit of the opcode's tttn
+ * nibble is flipped (for example `jz` becomes `jnz`, `setle` becomes `setg`).
+ * A mnemonic that carries no condition code (`jcxz`, `loop`, `fcmov*`, an
+ * ordinary `mov`, ...) is rejected with `ZYAN_STATUS_NOT_FOUND` and the buffer
+ * is left untouched, so the helper cannot corrupt an unrelated instruction.
+ *
+ * @param   instruction The decoded instruction that `buffer` holds.
+ * @param   buffer      The instruction's own bytes. Modified in place on success.
+ * @param   length      Number of valid bytes in `buffer`; must be at least
+ *                      `instruction->length`.
+ *
+ * @return  `ZYAN_STATUS_SUCCESS`, `ZYAN_STATUS_INVALID_ARGUMENT` for a null
+ *          argument, `ZYAN_STATUS_INSUFFICIENT_BUFFER_SIZE` when `length` is
+ *          too small, or `ZYAN_STATUS_NOT_FOUND` for a non-conditional
+ *          instruction.
+ */
+ZYDIS_EXPORT ZyanStatus ZydisNegateConditionInPlace(const ZydisDecodedInstruction* instruction,
+    ZyanU8* buffer, ZyanUSize length);
+
 #ifdef __cplusplus
 }
 #endif

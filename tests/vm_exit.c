@@ -186,6 +186,33 @@ int main(void)
         Fail("small", "buffer");
     }
 
+    /* VMX and SVM control enum-string accessors. */
+    {
+        const char* s = ZydisVmxControlGetString(ZYDIS_VMX_CONTROL_CPUID);
+        if (!s || strcmp(s, "cpuid"))
+        {
+            Fail("vmx string", "cpuid");
+        }
+        s = ZydisVmxControlGetString(ZYDIS_VMX_CONTROL_XSS);
+        if (!s || strcmp(s, "xss"))
+        {
+            Fail("vmx string", "xss");
+        }
+        if (ZydisVmxControlGetString((ZydisVmxControl)(ZYDIS_VMX_CONTROL_MAX_VALUE + 1)))
+        {
+            Fail("vmx string", "out-of-range accepted");
+        }
+        s = ZydisSvmControlGetString(ZYDIS_SVM_CONTROL_CR);
+        if (!s || strcmp(s, "cr"))
+        {
+            Fail("svm string", "cr");
+        }
+        if (ZydisSvmControlGetString((ZydisSvmControl)(ZYDIS_SVM_CONTROL_MAX_VALUE + 1)))
+        {
+            Fail("svm string", "out-of-range accepted");
+        }
+    }
+
     if (g_failures)
     {
         printf("%d failure(s)\n", g_failures);
