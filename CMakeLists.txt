@@ -68,6 +68,34 @@ option(ZYDIS_FUZZ_AFL_FAST
 option(ZYDIS_LIBFUZZER
     "Enables LLVM libfuzzer mode and reduces prints in ZydisFuzzIn"
     OFF)
+option(ZYDIS_ENABLE_LTO
+    "Enable aggressive speed optimizations (LTO, and MSVC /Ob3 inlining) for optimized builds"
+    ON)
+
+# Link-time optimization lets the compiler inline across the decoder's translation units, which
+# measurably speeds up the decode-and-format hot path. Enable it only for optimized configurations
+# (so Debug builds stay fast to compile) and only when the toolchain reports support, so a compiler
+# without LTO still configures cleanly.
+if (ZYDIS_ENABLE_LTO)
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT ZYDIS_IPO_SUPPORTED OUTPUT ZYDIS_IPO_MESSAGE LANGUAGES C)
+    if (ZYDIS_IPO_SUPPORTED)
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE ON)
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO ON)
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_MINSIZEREL ON)
+    else ()
+        message(STATUS "Zydis: LTO requested but unsupported by this toolchain: ${ZYDIS_IPO_MESSAGE}")
+    endif ()
+
+    # MSVC's /Ob3 raises the inlining threshold above the /O2 default of /Ob2. It is a pure
+    # inlining-aggressiveness knob with no semantic effect, and combined with LTO gives a further
+    # speed-up on the decode-and-format hot path. Replace /Ob2 (rather than appending /Ob3, which
+    # loses to the /Ob2 that CMake also emits as the MSBuild InlineFunctionExpansion property) so
+    # /Ob3 actually takes effect. Only MSVC understands it, and only for the Release flags.
+    if (MSVC AND CMAKE_C_FLAGS_RELEASE MATCHES "/Ob2")
+        string(REPLACE "/Ob2" "/Ob3" CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
+    endif ()
+endif ()
 
 # Dependencies
 option(ZYAN_SYSTEM_ZYCORE
