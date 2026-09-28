@@ -319,6 +319,44 @@ static ZyanU64 TimeDecode(const ZydisDecoder* decoder, ZyanU64 budget)
     return count;
 }
 
+/* Decode without operands (`ZydisDecoderDecodeInstruction`). This is the hot path for a caller
+   that only needs length, mnemonic, or category, and it is markedly faster than the fused
+   `ZydisDecoderDecodeFull` above because it skips operand decoding. */
+static ZyanU64 TimeDecodeInsn(const ZydisDecoder* decoder, ZyanU64 budget)
+{
+    ZyanU64 start = Ticks();
+    ZyanU64 count = 0;
+
+    do
+    {
+        ZyanUSize pass;
+
+        for (pass = 0; pass < 16; ++pass)
+        {
+            ZyanUSize offset = 0;
+
+            while (offset < sizeof(k_code))
+            {
+                ZydisDecodedInstruction instruction;
+                ZyanStatus status;
+
+                status = ZydisDecoderDecodeInstruction(decoder, ZYAN_NULL, k_code + offset,
+                    sizeof(k_code) - offset, &instruction);
+                if (ZYAN_FAILED(status))
+                {
+                    Fail("timed decode-only", offset, status);
+                    return 0;
+                }
+                g_sink += instruction.length;
+                offset += instruction.length;
+                ++count;
+            }
+        }
+    } while ((Ticks() - start) < budget);
+
+    return count;
+}
+
 static void Report(const char* name, ZyanU64 marks, ZyanU64 elapsed)
 {
     double seconds = Seconds(elapsed);
@@ -440,6 +478,15 @@ int main(int argc, char** argv)
         return 1;
     }
     Report("decode", count, Ticks() - start);
+
+    start = Ticks();
+    count = TimeDecodeInsn(&decoder, budget);
+    if (!count && g_failures)
+    {
+        printf("%d failure(s)\n", g_failures);
+        return 1;
+    }
+    Report("decode-only", count, Ticks() - start);
 
     for (style = 0; style < (sizeof(styles) / sizeof(styles[0])); ++style)
     {
